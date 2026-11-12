@@ -695,7 +695,7 @@ export function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(2)} МБ`;
 }
 
-export type ActiveNavTab = 'audit' | 'history' | 'pricing';
+export type ActiveNavTab = 'landing' | 'audit' | 'history' | 'pricing';
 
 export interface AuditHistoryEntry {
   id: string;

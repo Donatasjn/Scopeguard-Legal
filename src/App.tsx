@@ -10,6 +10,7 @@ import { SourceInputPanel } from './components/SourceInputPanel';
 import { ScopeItemsTable } from './components/ScopeItemsTable';
 import { DeliverablesView } from './components/DeliverablesView';
 import { AuditHistoryView } from './components/AuditHistoryView';
+import { LandingPage } from './components/LandingPage';
 import { PricingModal } from './components/PricingModal';
 import { OfficialChangeOrderPrintModal } from './components/OfficialChangeOrderPrintModal';
 import { AUDIT_PRESETS, type AuditPreset } from './data/presets';
@@ -623,6 +624,28 @@ export default function App() {
         />
 
         <main className="flex-1 min-w-0 px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+          {/* SCREEN 0: PRODUCT LANDING PAGE (Triggered by clicking Logo or 'О продукте') */}
+          {activeTab === 'landing' && (
+            <LandingPage
+              currency={currency}
+              hourlyRate={hourlyRate}
+              freemiumState={freemiumState}
+              onStartFreeAudit={() => {
+                setActiveTab('audit');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              onViewSampleReport={() => {
+                handleSelectPreset(AUDIT_PRESETS[0]);
+                setActiveTab('audit');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              onOpenHistory={() => {
+                setActiveTab('history');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+            />
+          )}
+
           {/* SCREEN 1: MAIN AUDIT WORKSPACE (Two-Column Desktop Layout) */}
           {activeTab === 'audit' && (
             <>

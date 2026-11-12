@@ -63,6 +63,12 @@ export const TopBar: React.FC<NavigationHubProps> = ({
     badge?: number;
   }> = [
     {
+      id: 'landing',
+      label: 'О продукте',
+      shortLabel: 'Главная',
+      icon: ShieldCheck,
+    },
+    {
       id: 'audit',
       label: 'Аудит ТЗ',
       shortLabel: 'Аудит ТЗ',
@@ -94,14 +100,17 @@ export const TopBar: React.FC<NavigationHubProps> = ({
     <>
       {/* Top Header Bar (Strict 3-Zone Contract, Compact height for 15% mobile cap) */}
       <header className="sticky top-0 z-30 h-13 sm:h-15 flex items-center justify-between gap-4 sm:gap-8 px-4 sm:px-6 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 print:hidden">
-        {/* Zone 1: Single text element wordmark */}
+        {/* Zone 1: Single text element wordmark — Clickable to open Product Landing Page */}
         <a
           href="#top"
+          data-testid="brand-logo"
+          title="Перейти на главную страницу о продукте ScopeGuard Legal"
           onClick={(e) => {
             e.preventDefault();
-            onSelectTab('audit');
+            onSelectTab('landing');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
           }}
-          className="text-base sm:text-lg font-bold tracking-tight text-slate-900 dark:text-white whitespace-nowrap shrink-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+          className="text-base sm:text-lg font-bold tracking-tight text-slate-900 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors whitespace-nowrap shrink-0 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
         >
           ScopeGuard Legal
         </a>
@@ -112,26 +121,35 @@ export const TopBar: React.FC<NavigationHubProps> = ({
           className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-600 dark:text-slate-300"
         >
           {activeTab === 'audit' ? (
-            auditAnchors.map((item) => {
-              const isActive = activeSection === item.id;
-              return (
-                <a
-                  key={item.id}
-                  href={`#${item.id}`}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    onSelectSection(item.id);
-                  }}
-                  className={`whitespace-nowrap shrink-0 py-1 transition-colors border-b-2 ${
-                    isActive
-                      ? 'border-indigo-600 text-slate-900 dark:text-white font-semibold'
-                      : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                >
-                  {item.label}
-                </a>
-              );
-            })
+            <>
+              <button
+                type="button"
+                onClick={() => onSelectTab('landing')}
+                className="whitespace-nowrap shrink-0 py-1 border-b-2 border-transparent text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors cursor-pointer"
+              >
+                О продукте
+              </button>
+              {auditAnchors.map((item) => {
+                const isActive = activeSection === item.id;
+                return (
+                  <a
+                    key={item.id}
+                    href={`#${item.id}`}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      onSelectSection(item.id);
+                    }}
+                    className={`whitespace-nowrap shrink-0 py-1 transition-colors border-b-2 ${
+                      isActive
+                        ? 'border-indigo-600 text-slate-900 dark:text-white font-semibold'
+                        : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    {item.label}
+                  </a>
+                );
+              })}
+            </>
           ) : (
             mainTabs.map((tab) => {
               const isActive = activeTab === tab.id;
@@ -315,7 +333,7 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
   }> = [
     {
       id: 'audit',
-      label: 'Аудит ТЗ',
+      label: 'Аудит ТЗ (Кабинет)',
       subtitle: 'Сверка и смета Change Order',
       icon: FileSearch,
     },
@@ -331,6 +349,12 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
       label: 'Тарифы и лимиты',
       subtitle: 'Подписка и способы оплаты',
       icon: CreditCard,
+    },
+    {
+      id: 'landing',
+      label: 'О продукте',
+      subtitle: 'Главная страница и обзор',
+      icon: ShieldCheck,
     },
   ];
 

@@ -601,8 +601,9 @@ export default function App() {
         formData.append('transcriptFile', transcriptFile);
       }
 
-      const apiUrl = import.meta.env.VITE_API_URL || '/api/audit';
-      const response = await fetch(apiUrl, {
+      const AUDIT_API_URL =
+        'https://qkkvqcfphbrprzptmuew.supabase.co/functions/v1/audit';
+      const response = await fetch(AUDIT_API_URL, {
         method: 'POST',
         body: formData,
       });

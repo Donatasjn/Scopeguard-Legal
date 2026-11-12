@@ -548,17 +548,11 @@ export default function App() {
       return;
     }
 
-    // If unauthenticated user clicks "Run Audit", smoothly open the Auth Modal
-    if (!currentUser) {
-      setAuthReasonMessage(
-        'Войдите в аккаунт или зарегистрируйтесь за 10 секунд, чтобы запустить ИИ-аудит и сохранить результат в облачную Библиотеку работ.'
-      );
-      setIsAuthModalOpen(true);
-      return;
-    }
-
-    // Check user's Supabase quota (audits_used < audits_limit for free plan)
-    if (!canUserRunAudit(currentUser) || !canPerformAudit(freemiumState)) {
+    // Check quota (if logged in — check profile quota; otherwise check local freemium quota)
+    if (
+      (currentUser && !canUserRunAudit(currentUser)) ||
+      (!currentUser && !canPerformAudit(freemiumState))
+    ) {
       setIsQuotaPaywallTriggered(true);
       setIsPricingModalOpen(true);
       return;
@@ -608,39 +602,76 @@ export default function App() {
         body: formData,
       });
 
-      const data = await response.json();
+      const rawText = await response.text();
+      let data: Record<string, unknown> = {};
+      if (rawText) {
+        try {
+          data = JSON.parse(rawText) as Record<string, unknown>;
+        } catch {
+          if (!response.ok) {
+            throw new Error(
+              rawText || `HTTP ${response.status}: ${response.statusText}`
+            );
+          }
+          throw new Error(`Некорректный JSON от сервера: ${rawText.slice(0, 180)}`);
+        }
+      }
+
       if (!response.ok) {
-        setValidationError(
-          data?.error || 'Не удалось выполнить сверку документов.'
-        );
-        return;
+        const remoteErrorMessage =
+          (typeof data?.error === 'string' && data.error) ||
+          (typeof data?.message === 'string' && data.message) ||
+          (typeof data?.details === 'string' && data.details) ||
+          rawText ||
+          `HTTP ${response.status}: ${response.statusText}`;
+        throw new Error(remoteErrorMessage);
       }
 
       setAnalysisProgress(100);
 
+      // 1. Universally extract reportData and immediately update UI state
+      const reportData = (data?.report || data) as unknown;
       const userEnteredName = projectName.trim();
       const validated = validateAuditReportSchema(
-        data?.report ?? data,
+        reportData,
         userEnteredName || 'Аудит ИТ-проекта'
       );
       const finalProjectName = userEnteredName || validated.project_name;
       const finalAuditDate = auditDate.trim() || validated.audit_date;
 
-      const syncedReport = syncDeliverablesWithItems(
-        validated.out_of_scope_items,
-        validated.in_scope_items,
-        finalProjectName,
-        finalAuditDate,
-        hourlyRate,
-        currency
-      );
+      const immediateReport: ScopeAuditReport = {
+        ...validated,
+        project_name: finalProjectName,
+        audit_date: finalAuditDate,
+        client_email_draft:
+          validated.client_email_draft?.subject &&
+          validated.client_email_draft?.body
+            ? validated.client_email_draft
+            : rebuildClientEmailDraft(
+                finalProjectName,
+                validated.out_of_scope_items,
+                validated.in_scope_items,
+                hourlyRate,
+                currency
+              ),
+        change_order_summary:
+          validated.change_order_summary ||
+          rebuildChangeOrderSummary(
+            finalProjectName,
+            finalAuditDate,
+            validated.out_of_scope_items,
+            hourlyRate,
+            currency
+          ),
+      };
+
+      // Immediately save reportData in state and show results on screen
+      setReport(immediateReport);
       setProjectName(finalProjectName);
       setAuditDate(finalAuditDate);
       setFreemiumState((prev) => consumeAuditQuota(prev));
 
-      // Save to Supabase `audits`, increment `profiles.audits_used`, and write to `activity_logs`
-      const { updatedProfile, savedAudit } = await recordCompletedAuditForUser({
-        profile: currentUser,
+      const localEntry = buildAuditHistoryEntry({
         projectName: finalProjectName,
         contractNumber,
         auditDate: finalAuditDate,
@@ -650,48 +681,60 @@ export default function App() {
         transcriptText:
           transcriptText ||
           (transcriptFile ? `[Медиафайл встречи: ${transcriptFile.name}]` : ''),
-        report: syncedReport,
+        report: immediateReport,
       });
-      setCurrentUser(updatedProfile);
-      setCloudAudits((prev) => [
-        savedAudit,
-        ...prev.filter((a) => a.id !== savedAudit.id),
-      ]);
+      setHistoryEntries((prev) => upsertAuditHistoryEntry(prev, localEntry));
+      setActiveHistoryId(localEntry.id);
 
-      // Automatically save completed audit to History Library in localStorage
-      const savedEntry = buildAuditHistoryEntry({
-        id: savedAudit.id,
-        projectName: finalProjectName,
-        contractNumber,
-        auditDate: finalAuditDate,
-        hourlyRate,
-        currency,
-        specText: specText || (specFile ? `[Файл ТЗ: ${specFile.name}]` : ''),
-        transcriptText:
-          transcriptText ||
-          (transcriptFile ? `[Медиафайл встречи: ${transcriptFile.name}]` : ''),
-        report: syncedReport,
-      });
-      setHistoryEntries((prev) => upsertAuditHistoryEntry(prev, savedEntry));
-      setActiveHistoryId(savedEntry.id);
       addToast(
-        'Аудит завершен и сохранен в Supabase',
-        `Проект «${finalProjectName}»: выявлено ${validated.out_of_scope_items.length} поз. вне ТЗ.`,
+        'Юридический аудит успешно завершен',
+        `Проект «${finalProjectName}»: выявлено ${immediateReport.out_of_scope_items.length} поз. вне ТЗ.`,
         'document'
       );
 
-      // Smoothly scroll to results zone
+      // Smoothly scroll to results zone immediately
       window.setTimeout(() => {
         const el = document.getElementById('results-zone');
         if (el) {
           el.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
       }, 80);
+
+      // 2. Separate inner try / catch for Supabase DB tables (audits, profiles, activity_logs)
+      try {
+        if (currentUser) {
+          const { updatedProfile, savedAudit } =
+            await recordCompletedAuditForUser({
+              profile: currentUser,
+              projectName: finalProjectName,
+              contractNumber,
+              auditDate: finalAuditDate,
+              hourlyRate,
+              currency,
+              specText:
+                specText || (specFile ? `[Файл ТЗ: ${specFile.name}]` : ''),
+              transcriptText:
+                transcriptText ||
+                (transcriptFile
+                  ? `[Медиафайл встречи: ${transcriptFile.name}]`
+                  : ''),
+              report: immediateReport,
+            });
+          setCurrentUser(updatedProfile);
+          setCloudAudits((prev) => [
+            savedAudit,
+            ...prev.filter((a) => a.id !== savedAudit.id),
+          ]);
+        }
+      } catch (dbErr) {
+        console.warn(
+          'Ошибка сохранения отчета в таблицы Supabase (audits / profiles / activity_logs):',
+          dbErr
+        );
+      }
     } catch (err) {
       setValidationError(
-        err instanceof Error
-          ? err.message
-          : 'Ошибка соединения с сервером анализа.'
+        err instanceof Error ? err.message : String(err)
       );
     } finally {
       window.clearTimeout(stepTimer1);

@@ -258,6 +258,56 @@ test('audit history helpers build, upsert, filter by search/date, and delete rec
   assert.equal(afterDelete[0].id, 'h-2');
 });
 
+test('Supabase client config and user quota/profile helpers enforce rules accurately', async () => {
+  const {
+    SUPABASE_URL,
+    SUPABASE_ANON_KEY,
+    getInitials,
+    canUserRunAudit,
+    getRemainingUserAudits,
+    translateSupabaseAuthError,
+  } = await import('../lib/supabase');
 
+  assert.equal(SUPABASE_URL, 'https://qkkvqcfphbrprzptmuew.supabase.co');
+  assert.equal(SUPABASE_URL.includes('/rest/v1'), false);
+  assert.equal(
+    SUPABASE_ANON_KEY,
+    'sb_publishable_Pue5u-HDbDmqqVpxtJL1bw_ishUWzPC'
+  );
 
+  assert.equal(getInitials('BinaryWave Studio'), 'BS');
+  assert.equal(getInitials('donatas.jn@gmail.com'), 'DJ');
+
+  const freeProfile = {
+    id: 'u1',
+    email: 'test@studio.ru',
+    full_name: 'Test Studio',
+    plan: 'free' as const,
+    audits_used: 2,
+    audits_limit: 3,
+    is_admin: false,
+    created_at: '2026-11-12T00:00:00Z',
+  };
+  assert.equal(canUserRunAudit(freeProfile), true);
+  assert.equal(getRemainingUserAudits(freeProfile), 1);
+
+  const exhaustedProfile = { ...freeProfile, audits_used: 3 };
+  assert.equal(canUserRunAudit(exhaustedProfile), false);
+  assert.equal(getRemainingUserAudits(exhaustedProfile), 0);
+
+  const proProfile = {
+    ...freeProfile,
+    plan: 'pro' as const,
+    audits_used: 5,
+    audits_limit: 999,
+  };
+  assert.equal(canUserRunAudit(proProfile), true);
+  assert.equal(getRemainingUserAudits(proProfile), 994);
+
+  assert.ok(
+    translateSupabaseAuthError('Invalid login credentials').includes(
+      'Неверный Email или пароль'
+    )
+  );
+});
 

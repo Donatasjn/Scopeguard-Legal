@@ -26,6 +26,7 @@ interface DeliverablesViewProps {
   onUpdateChangeOrder: (summary: string) => void;
   onRegenerateTemplates: () => void;
   onOpenPrintModal: () => void;
+  onEmailCopied?: () => void;
   onNotifyToast?: (title: string, description?: string) => void;
 }
 
@@ -39,6 +40,7 @@ export const DeliverablesView: React.FC<DeliverablesViewProps> = ({
   onUpdateChangeOrder,
   onRegenerateTemplates,
   onOpenPrintModal,
+  onEmailCopied,
   onNotifyToast,
 }) => {
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
@@ -58,6 +60,9 @@ export const DeliverablesView: React.FC<DeliverablesViewProps> = ({
       document.body.removeChild(ta);
     }
     setCopiedKey(key);
+    if (key === 'email') {
+      onEmailCopied?.();
+    }
     onNotifyToast?.(
       toastTitle,
       'Готовый текст скопирован в буфер обмена и готов к отправке.'

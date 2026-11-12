@@ -25,7 +25,24 @@ import { PricingModal } from './components/PricingModal';
 import { SampleReportModal } from './components/SampleReportModal';
 import { ToastContainer, type ToastItem } from './components/ToastContainer';
 import { OfficialChangeOrderPrintModal } from './components/OfficialChangeOrderPrintModal';
+import { AuthModal } from './components/AuthModal';
+import { AccountWorkspaceView } from './components/AccountWorkspaceView';
+import { DeveloperAdminView } from './components/DeveloperAdminView';
 import { AUDIT_PRESETS, type AuditPreset } from './data/presets';
+import {
+  canUserRunAudit,
+  deleteCloudAudit,
+  fetchOrCreateUserProfile,
+  fetchUserCloudAudits,
+  loadActiveUserFromStorage,
+  logUserActivity,
+  recordCompletedAuditForUser,
+  signOutCurrentUser,
+  supabase,
+  upgradeProfileToPro,
+  type CloudAuditRecord,
+  type UserProfile,
+} from './lib/supabase';
 import {
   buildAuditHistoryEntry,
   calculateScopeMetrics,
@@ -260,6 +277,16 @@ export default function App() {
   const [analysisProgress, setAnalysisProgress] = useState<number>(0);
   const [validationError, setValidationError] = useState<string | null>(null);
 
+  // Supabase User Account & Cloud Workspace State
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(
+    loadActiveUserFromStorage
+  );
+  const [cloudAudits, setCloudAudits] = useState<CloudAuditRecord[]>([]);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
+  const [authReasonMessage, setAuthReasonMessage] = useState<string | null>(
+    null
+  );
+
   // Freemium & Paywall State
   const [freemiumState, setFreemiumState] =
     useState<FreemiumState>(loadFreemiumState);
@@ -287,6 +314,68 @@ export default function App() {
   const dismissToast = (id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   };
+
+  // Sync Supabase Auth Session & Cloud Audits
+  useEffect(() => {
+    let mounted = true;
+
+    const initSession = async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        if (mounted && data?.session?.user) {
+          const profile = await fetchOrCreateUserProfile({
+            id: data.session.user.id,
+            email: data.session.user.email || '',
+            fullName: data.session.user.user_metadata?.full_name,
+          });
+          setCurrentUser(profile);
+        }
+      } catch {
+        // Fallback to localStorage user if offline
+      }
+    };
+
+    initSession();
+
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      async (_event, session) => {
+        if (!mounted) return;
+        if (session?.user) {
+          const profile = await fetchOrCreateUserProfile({
+            id: session.user.id,
+            email: session.user.email || '',
+            fullName: session.user.user_metadata?.full_name,
+          });
+          setCurrentUser(profile);
+        }
+      }
+    );
+
+    return () => {
+      mounted = false;
+      listener.subscription.unsubscribe();
+    };
+  }, []);
+
+  // Load user's cloud audits and sync brand/tier whenever currentUser changes
+  useEffect(() => {
+    if (!currentUser) {
+      setCloudAudits([]);
+      return;
+    }
+
+    setFreemiumState((prev) => ({
+      ...prev,
+      tier: currentUser.plan === 'pro' ? 'agency' : 'free',
+      usedAudits: currentUser.audits_used,
+      maxFreeAudits: currentUser.audits_limit,
+      agencyBrandName: currentUser.full_name || prev.agencyBrandName,
+    }));
+
+    fetchUserCloudAudits(currentUser.id, currentUser.email).then((list) => {
+      setCloudAudits(list);
+    });
+  }, [currentUser]);
 
   // Sync dark class on documentElement
   useEffect(() => {
@@ -420,6 +509,32 @@ export default function App() {
     setValidationError(null);
   };
 
+  const handleOpenPrintModalWithLog = () => {
+    setIsPrintModalOpen(true);
+    logUserActivity(
+      currentUser,
+      'Скачивание PDF',
+      `Сформирован официальный бланк Change Order по проекту «${
+        report.project_name || projectName || 'Аудит проекта'
+      }» (${formatMoney(metrics.totalCost, currency)})`
+    );
+    addToast(
+      'Официальный бланк Change Order открыт',
+      'Готов к печати, сохранению в PDF или выгрузке в Word.',
+      'document'
+    );
+  };
+
+  const handleLogEmailCopied = () => {
+    logUserActivity(
+      currentUser,
+      'Копирование письма клиенту',
+      `Скопировано дипломатичное письмо по проекту «${
+        report.project_name || projectName || 'Аудит проекта'
+      }»`
+    );
+  };
+
   const runScopeAudit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
 
@@ -433,8 +548,17 @@ export default function App() {
       return;
     }
 
-    // Freemium Paywall Check
-    if (!canPerformAudit(freemiumState)) {
+    // If unauthenticated user clicks "Run Audit", smoothly open the Auth Modal
+    if (!currentUser) {
+      setAuthReasonMessage(
+        'Войдите в аккаунт или зарегистрируйтесь за 10 секунд, чтобы запустить ИИ-аудит и сохранить результат в облачную Библиотеку работ.'
+      );
+      setIsAuthModalOpen(true);
+      return;
+    }
+
+    // Check user's Supabase quota (audits_used < audits_limit for free plan)
+    if (!canUserRunAudit(currentUser) || !canPerformAudit(freemiumState)) {
       setIsQuotaPaywallTriggered(true);
       setIsPricingModalOpen(true);
       return;
@@ -513,8 +637,29 @@ export default function App() {
       setAuditDate(finalAuditDate);
       setFreemiumState((prev) => consumeAuditQuota(prev));
 
+      // Save to Supabase `audits`, increment `profiles.audits_used`, and write to `activity_logs`
+      const { updatedProfile, savedAudit } = await recordCompletedAuditForUser({
+        profile: currentUser,
+        projectName: finalProjectName,
+        contractNumber,
+        auditDate: finalAuditDate,
+        hourlyRate,
+        currency,
+        specText: specText || (specFile ? `[Файл ТЗ: ${specFile.name}]` : ''),
+        transcriptText:
+          transcriptText ||
+          (transcriptFile ? `[Медиафайл встречи: ${transcriptFile.name}]` : ''),
+        report: syncedReport,
+      });
+      setCurrentUser(updatedProfile);
+      setCloudAudits((prev) => [
+        savedAudit,
+        ...prev.filter((a) => a.id !== savedAudit.id),
+      ]);
+
       // Automatically save completed audit to History Library in localStorage
       const savedEntry = buildAuditHistoryEntry({
+        id: savedAudit.id,
         projectName: finalProjectName,
         contractNumber,
         auditDate: finalAuditDate,
@@ -529,7 +674,7 @@ export default function App() {
       setHistoryEntries((prev) => upsertAuditHistoryEntry(prev, savedEntry));
       setActiveHistoryId(savedEntry.id);
       addToast(
-        'Юридический аудит завершен и сохранен',
+        'Аудит завершен и сохранен в Supabase',
         `Проект «${finalProjectName}»: выявлено ${validated.out_of_scope_items.length} поз. вне ТЗ.`,
         'document'
       );
@@ -585,9 +730,52 @@ export default function App() {
     setActiveTab('audit');
   };
 
+  const handleOpenCloudAuditRecord = (cloudRecord: CloudAuditRecord) => {
+    const rateInActive = convertHourlyRate(
+      cloudRecord.hourly_rate || 4500,
+      cloudRecord.currency || 'RUB',
+      currency
+    );
+    setActiveHistoryId(cloudRecord.id);
+    setSelectedPresetId('custom');
+    setProjectName(cloudRecord.project_name);
+    setContractNumber(cloudRecord.contract_number || 'Договор №48/26-ИТ');
+    setAuditDate(cloudRecord.audit_date);
+    setHourlyRate(rateInActive);
+    if (cloudRecord.spec_text) setSpecText(cloudRecord.spec_text);
+    setSpecFile(null);
+    if (cloudRecord.transcript_text) {
+      setTranscriptText(cloudRecord.transcript_text);
+    }
+    setTranscriptFile(null);
+    syncDeliverablesWithItems(
+      cloudRecord.report.out_of_scope_items,
+      cloudRecord.report.in_scope_items,
+      cloudRecord.project_name,
+      cloudRecord.audit_date,
+      rateInActive,
+      currency
+    );
+    setValidationError(null);
+    setActiveTab('audit');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    addToast(
+      `Открыт облачный отчет «${cloudRecord.project_name}»`,
+      'Реестр доработок, письмо и Change Order загружены в рабочую зону.',
+      'info'
+    );
+  };
+
+  const handleDeleteCloudAuditRecord = async (auditId: string) => {
+    await deleteCloudAudit(auditId);
+    setCloudAudits((prev) => prev.filter((a) => a.id !== auditId));
+    setHistoryEntries((prev) => deleteAuditHistoryEntry(prev, auditId));
+    addToast('Отчет удален из облака Supabase', undefined, 'info');
+  };
+
   const handlePrintHistoryEntry = (entry: AuditHistoryEntry) => {
     handleOpenHistoryEntry(entry);
-    setIsPrintModalOpen(true);
+    handleOpenPrintModalWithLog();
   };
 
   const handleDeleteHistoryEntry = (id: string) => {
@@ -659,18 +847,22 @@ export default function App() {
     }, 50);
   };
 
-  const handleCompleteUpgrade = (
+  const handleCompleteUpgrade = async (
     tier: 'freelance' | 'agency',
     customAgencyBrand?: string
   ) => {
     setFreemiumState((prev) =>
       upgradeSubscription(prev, tier, customAgencyBrand)
     );
+    if (currentUser) {
+      const updated = await upgradeProfileToPro(currentUser, customAgencyBrand);
+      setCurrentUser(updated);
+    }
     setIsQuotaPaywallTriggered(false);
     setIsPricingModalOpen(false);
     addToast(
       `Тариф ${tier === 'agency' ? 'Agency Unlimited' : 'Freelance Pro'} активирован`,
-      'Лимиты проверок и функции экспорта документов успешно обновлены.',
+      'Лимит проверок в профиле увеличен до 999, функции экспорта разблокированы.',
       'success'
     );
   };
@@ -681,12 +873,25 @@ export default function App() {
     addToast('Демо-лимит сброшен', 'Доступно 2 из 2 бесплатных аудитов.', 'info');
   };
 
+  const handleSignOut = async () => {
+    await signOutCurrentUser();
+    setCurrentUser(null);
+    if (activeTab === 'account' || activeTab === 'admin') {
+      setActiveTab('landing');
+    }
+    addToast(
+      'Вы вышли из аккаунта',
+      'Сессия Supabase завершена.',
+      'info'
+    );
+  };
+
   return (
     <div
       id="top"
       className="min-h-screen flex flex-col bg-[#F8FAFC] dark:bg-slate-950 text-slate-900 dark:text-slate-100 pb-16 lg:pb-0 transition-colors"
     >
-      {/* Sleek Floating Top Bar (No bulky left sidebar!) */}
+      {/* Sleek Floating Top Bar (With Interactive User Profile Widget & Admin Tab) */}
       <TopBar
         activeTab={activeTab}
         onSelectTab={(tab) => {
@@ -697,6 +902,12 @@ export default function App() {
         onSelectSection={handleSelectSection}
         historyCount={historyEntries.length}
         freemiumState={freemiumState}
+        currentUser={currentUser}
+        onOpenAuthModal={() => {
+          setAuthReasonMessage(null);
+          setIsAuthModalOpen(true);
+        }}
+        onSignOut={handleSignOut}
         currency={currency}
         onChangeCurrency={handleChangeCurrency}
         isDark={isDark}
@@ -738,7 +949,9 @@ export default function App() {
                     <Sparkles className="w-3 h-3" />
                     Рабочий кабинет ScopeGuard
                   </span>
-                  <span>{freemiumState.agencyBrandName}</span>
+                  <span>
+                    {currentUser?.full_name || freemiumState.agencyBrandName}
+                  </span>
                   <span aria-hidden="true">·</span>
                   <span>{contractNumber}</span>
                 </div>
@@ -758,23 +971,22 @@ export default function App() {
 
                 <button
                   type="button"
-                  onClick={() => setActiveTab('history')}
+                  onClick={() =>
+                    setActiveTab(currentUser ? 'account' : 'history')
+                  }
                   className="min-h-[40px] inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200/90 dark:border-slate-800 rounded-xl shadow-2xs transition-all active:scale-95 cursor-pointer"
                 >
                   <FolderClock className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-                  <span>Архив ({historyEntries.length})</span>
+                  <span>
+                    {currentUser
+                      ? `Библиотека (${cloudAudits.length})`
+                      : `Архив (${historyEntries.length})`}
+                  </span>
                 </button>
 
                 <button
                   type="button"
-                  onClick={() => {
-                    setIsPrintModalOpen(true);
-                    addToast(
-                      'Официальный бланк Change Order сформирован',
-                      'Готов к печати, сохранению в PDF или выгрузке в Word.',
-                      'document'
-                    );
-                  }}
+                  onClick={handleOpenPrintModalWithLog}
                   className="min-h-[40px] inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 rounded-xl shadow-sm transition-all active:scale-95 cursor-pointer"
                 >
                   <Printer className="w-3.5 h-3.5" />
@@ -936,7 +1148,7 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Unified Results Navigation Bar: «Все разделы / Реестр / Письмо / Доп. соглашение / PDF» */}
+              {/* Unified Results Navigation Bar */}
               <div className="glass-card rounded-2xl p-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div
                   role="tablist"
@@ -987,14 +1199,7 @@ export default function App() {
 
                 <button
                   type="button"
-                  onClick={() => {
-                    setIsPrintModalOpen(true);
-                    addToast(
-                      'Официальный бланк Change Order открыт',
-                      'Доступна печать в PDF или скачивание в Word (.doc).',
-                      'document'
-                    );
-                  }}
+                  onClick={handleOpenPrintModalWithLog}
                   className="min-h-[38px] inline-flex items-center justify-center gap-1.5 px-4 py-1.5 text-xs font-bold text-white bg-slate-900 dark:bg-indigo-600 hover:bg-indigo-600 dark:hover:bg-indigo-500 rounded-xl shadow-xs transition-all active:scale-95 cursor-pointer whitespace-nowrap"
                 >
                   <Printer className="w-3.5 h-3.5" />
@@ -1064,14 +1269,8 @@ export default function App() {
                         report.in_scope_items
                       )
                     }
-                    onOpenPrintModal={() => {
-                      setIsPrintModalOpen(true);
-                      addToast(
-                        'Официальный бланк Change Order открыт',
-                        'Вы можете распечатать документ в PDF или скачать в формате Word.',
-                        'document'
-                      );
-                    }}
+                    onOpenPrintModal={handleOpenPrintModalWithLog}
+                    onEmailCopied={handleLogEmailCopied}
                     onNotifyToast={(title, desc) =>
                       addToast(title, desc, 'success')
                     }
@@ -1108,7 +1307,69 @@ export default function App() {
           </main>
         )}
 
-        {/* SCREEN 3: TARIFFS & LIMITS HUB */}
+        {/* SCREEN 3: PERSONAL USER ACCOUNT & CLOUD WORKSPACE ("ЛИЧНЫЙ КАБИНЕТ") */}
+        {activeTab === 'account' && (
+          <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 animate-tab-fade">
+            {currentUser ? (
+              <AccountWorkspaceView
+                profile={currentUser}
+                cloudAudits={cloudAudits}
+                currency={currency}
+                onProfileUpdated={(updated) => {
+                  setCurrentUser(updated);
+                  setFreemiumState((prev) => ({
+                    ...prev,
+                    agencyBrandName: updated.full_name,
+                  }));
+                }}
+                onOpenCloudAudit={handleOpenCloudAuditRecord}
+                onDeleteCloudAudit={handleDeleteCloudAuditRecord}
+                onOpenPricingModal={() => {
+                  setIsQuotaPaywallTriggered(false);
+                  setIsPricingModalOpen(true);
+                }}
+                onStartNewAudit={() => {
+                  handleClearInputs();
+                  setActiveTab('audit');
+                }}
+                onOpenAdminPanel={() => setActiveTab('admin')}
+                onSignOut={handleSignOut}
+                onNotifyToast={addToast}
+              />
+            ) : (
+              <div className="glass-card rounded-3xl p-8 text-center space-y-4 max-w-lg mx-auto">
+                <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+                  Авторизуйтесь для доступа к Личному кабинету
+                </h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Войдите или зарегистрируйтесь через Supabase Auth, чтобы управлять профилем и облачной Библиотекой работ.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setIsAuthModalOpen(true)}
+                  className="min-h-[42px] px-6 py-2.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 rounded-xl cursor-pointer"
+                >
+                  Войти / Регистрация
+                </button>
+              </div>
+            )}
+          </main>
+        )}
+
+        {/* SCREEN 4: DEVELOPER ADMIN DASHBOARD ("КАБИНЕТ РАЗРАБОТЧИКА") */}
+        {activeTab === 'admin' && currentUser?.is_admin && (
+          <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 animate-tab-fade">
+            <DeveloperAdminView
+              currentAdmin={currentUser}
+              currency={currency}
+              onCurrentAdminUpdated={setCurrentUser}
+              onOpenAuditInWorkspace={handleOpenCloudAuditRecord}
+              onNotifyToast={addToast}
+            />
+          </main>
+        )}
+
+        {/* SCREEN 5: TARIFFS & LIMITS HUB */}
         {activeTab === 'pricing' && (
           <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 animate-tab-fade">
             <PricingModal
@@ -1134,7 +1395,7 @@ export default function App() {
             ScopeGuard Legal — Система защиты ИТ-исполнителей от несогласованного расширения объема работ
           </span>
           <span>
-            Формат выгрузки: Строгая JSON-схема · Change Order PDF/Word · Gemini File API (PDF/DOCX/MP3/WAV)
+            Supabase Cloud Auth & Database · Строгая JSON-схема · Change Order PDF/Word
           </span>
         </div>
       </footer>
@@ -1147,6 +1408,30 @@ export default function App() {
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }}
         historyCount={historyEntries.length}
+        currentUser={currentUser}
+      />
+
+      {/* Frosted Glass Supabase Authentication Modal */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => {
+          setIsAuthModalOpen(false);
+          setAuthReasonMessage(null);
+        }}
+        reasonMessage={authReasonMessage}
+        onAuthSuccess={(profile, isNewUser) => {
+          setCurrentUser(profile);
+          setAuthReasonMessage(null);
+          addToast(
+            isNewUser
+              ? `Добро пожаловать, ${profile.full_name}!`
+              : `Вы вошли как ${profile.full_name}`,
+            profile.is_admin
+              ? 'Активен доступ к Личному кабинету и Кабинету разработчика.'
+              : `Тариф: ${profile.plan.toUpperCase()} · Проверок: ${profile.audits_used}/${profile.audits_limit}`,
+            'success'
+          );
+        }}
       />
 
       {/* Interactive Sample Report Preview Modal (From Landing Page) */}
@@ -1175,7 +1460,9 @@ export default function App() {
         currency={currency}
         onChangeCurrency={handleChangeCurrency}
         quotaExhaustedReason={isQuotaPaywallTriggered}
-        initialAgencyBrand={freemiumState.agencyBrandName}
+        initialAgencyBrand={
+          currentUser?.full_name || freemiumState.agencyBrandName
+        }
         onCompleteUpgrade={handleCompleteUpgrade}
         onResetDemoQuota={handleResetDemoQuota}
       />
@@ -1189,7 +1476,9 @@ export default function App() {
         currency={currency}
         contractNumber={contractNumber}
         onChangeContractNumber={setContractNumber}
-        agencyBrandName={freemiumState.agencyBrandName}
+        agencyBrandName={
+          currentUser?.full_name || freemiumState.agencyBrandName
+        }
         onChangeAgencyBrandName={(val) =>
           setFreemiumState((prev) => ({ ...prev, agencyBrandName: val }))
         }
@@ -1201,7 +1490,7 @@ export default function App() {
         onChangeClientRequisites={(val) =>
           setFreemiumState((prev) => ({ ...prev, clientRequisites: val }))
         }
-        tier={freemiumState.tier}
+        tier={currentUser?.plan === 'pro' ? 'agency' : freemiumState.tier}
       />
 
       {/* Bottom-Right Animated Toast Notification Stack */}

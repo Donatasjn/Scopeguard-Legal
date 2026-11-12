@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import {
   AlertTriangle,
+  Calculator,
   CheckCircle2,
   Clock,
   Plus,
   Search,
   ShieldAlert,
   Trash2,
+  X,
 } from 'lucide-react';
 import {
   clampSuggestedHours,
@@ -31,6 +33,8 @@ interface ScopeItemsTableProps {
   onRemoveInScopeItem: (index: number) => void;
 }
 
+const HOUR_PRESETS = [4, 8, 16, 24, 36];
+
 export const ScopeItemsTable: React.FC<ScopeItemsTableProps> = ({
   outOfScopeItems,
   inScopeItems,
@@ -47,9 +51,9 @@ export const ScopeItemsTable: React.FC<ScopeItemsTableProps> = ({
     'all'
   );
   const [searchQuery, setSearchQuery] = useState('');
-  const [isAddFormOpen, setIsAddFormOpen] = useState(false);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
-  // New out-of-scope item form state
+  // New out-of-scope item modal state
   const [newTitle, setNewTitle] = useState('');
   const [newQuote, setNewQuote] = useState('');
   const [newReason, setNewReason] = useState('');
@@ -72,6 +76,10 @@ export const ScopeItemsTable: React.FC<ScopeItemsTableProps> = ({
     return matchesSeverity && matchesQuery;
   });
 
+  const safeNewHours = clampSuggestedHours(newHours);
+  const liveItemCost = safeNewHours * hourlyRate;
+  const liveShiftDays = Math.max(1, Math.ceil(safeNewHours / 6));
+
   const handleCreateItem = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTitle.trim() || !newQuote.trim() || !newReason.trim()) {
@@ -85,7 +93,7 @@ export const ScopeItemsTable: React.FC<ScopeItemsTableProps> = ({
       title: truncateTitleToSixWords(newTitle),
       client_quote: newQuote.trim(),
       scope_conflict_reason: newReason.trim(),
-      suggested_hours: clampSuggestedHours(newHours),
+      suggested_hours: safeNewHours,
       severity: newSeverity,
     });
     setNewTitle('');
@@ -93,7 +101,7 @@ export const ScopeItemsTable: React.FC<ScopeItemsTableProps> = ({
     setNewReason('');
     setNewHours(12);
     setNewSeverity('medium');
-    setIsAddFormOpen(false);
+    setIsAddModalOpen(false);
   };
 
   const handleCreateInScope = (e: React.FormEvent) => {
@@ -114,9 +122,9 @@ export const ScopeItemsTable: React.FC<ScopeItemsTableProps> = ({
       {/* Out of Scope Register */}
       <section
         aria-label="Реестр новых хотелок вне ТЗ"
-        className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 sm:p-6"
+        className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 sm:p-6 shadow-sm"
       >
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-slate-200 dark:border-slate-800">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-slate-200/80 dark:border-slate-800">
           <div>
             <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
               02. Выявленный Scope Creep: реестр доработок вне ТЗ
@@ -128,11 +136,15 @@ export const ScopeItemsTable: React.FC<ScopeItemsTableProps> = ({
 
           <button
             type="button"
-            onClick={() => setIsAddFormOpen((prev) => !prev)}
-            className="min-h-[44px] inline-flex items-center justify-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 rounded-xl transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+            data-testid="open-add-item-modal-btn"
+            onClick={() => {
+              setAddFormError(null);
+              setIsAddModalOpen(true);
+            }}
+            className="min-h-[44px] inline-flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 rounded-xl shadow-xs transition-all whitespace-nowrap shrink-0 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
-            <span>Добавить доработку</span>
+            <span>+ Добавить доработку</span>
           </button>
         </div>
 
@@ -156,7 +168,7 @@ export const ScopeItemsTable: React.FC<ScopeItemsTableProps> = ({
                 key={tab.id}
                 type="button"
                 onClick={() => setSeverityFilter(tab.id)}
-                className={`min-h-[36px] px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+                className={`min-h-[36px] px-3 py-1.5 text-xs font-semibold rounded-lg transition-all whitespace-nowrap shrink-0 cursor-pointer ${
                   severityFilter === tab.id
                     ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -175,140 +187,10 @@ export const ScopeItemsTable: React.FC<ScopeItemsTableProps> = ({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Поиск по цитате или ТЗ..."
-              className="w-full min-h-[40px] pl-9 pr-3 py-1.5 text-xs bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-800 focus:border-indigo-500 focus:outline-none"
+              className="w-full min-h-[40px] pl-9 pr-3 py-1.5 text-xs bg-slate-50 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-800 focus:border-indigo-500 focus:outline-none transition-colors"
             />
           </div>
         </div>
-
-        {/* Collapsible manual addition form */}
-        {isAddFormOpen && (
-          <form
-            onSubmit={handleCreateItem}
-            className="mt-4 p-4 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl space-y-4"
-          >
-            <div className="flex items-center justify-between">
-              <h3 className="text-xs font-bold text-slate-900 dark:text-white">
-                Ручная фиксация дополнительного требования клиента
-              </h3>
-              <button
-                type="button"
-                onClick={() => setIsAddFormOpen(false)}
-                className="text-xs text-slate-500 hover:text-slate-900 dark:hover:text-white cursor-pointer"
-              >
-                Отмена
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
-              <div>
-                <label
-                  htmlFor="new-item-title"
-                  className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1"
-                >
-                  Краткая суть хотелки (до 6 слов)
-                </label>
-                <input
-                  id="new-item-title"
-                  type="text"
-                  value={newTitle}
-                  onChange={(e) => setNewTitle(e.target.value)}
-                  placeholder="Напр.: Экспорт аналитики в PDF"
-                  className="w-full min-h-[42px] px-3 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"
-                />
-              </div>
-
-              <div>
-                <label
-                  htmlFor="new-item-hours"
-                  className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1"
-                >
-                  Оценка трудозатрат (1–40 ч)
-                </label>
-                <input
-                  id="new-item-hours"
-                  type="number"
-                  min={1}
-                  max={40}
-                  value={newHours}
-                  onChange={(e) => setNewHours(Number(e.target.value))}
-                  className="w-full min-h-[42px] px-3 py-2 text-xs font-mono tabular-nums bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"
-                />
-              </div>
-
-              <div>
-                <label
-                  htmlFor="new-item-severity"
-                  className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1"
-                >
-                  Уровень влияния на архитектуру
-                </label>
-                <select
-                  id="new-item-severity"
-                  value={newSeverity}
-                  onChange={(e) =>
-                    setNewSeverity(e.target.value as SeverityLevel)
-                  }
-                  className="w-full min-h-[42px] px-3 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"
-                >
-                  <option value="critical">Критичный (critical)</option>
-                  <option value="medium">Средний (medium)</option>
-                  <option value="low">Низкий (low)</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-              <div>
-                <label
-                  htmlFor="new-item-quote"
-                  className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1"
-                >
-                  Точная цитата заказчика и таймкод
-                </label>
-                <input
-                  id="new-item-quote"
-                  type="text"
-                  value={newQuote}
-                  onChange={(e) => setNewQuote(e.target.value)}
-                  placeholder="[18:20] «Давайте еще кнопку выгрузки презентации в PDF»"
-                  className="w-full min-h-[42px] px-3 py-2 text-xs font-mono bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"
-                />
-              </div>
-
-              <div>
-                <label
-                  htmlFor="new-item-reason"
-                  className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1"
-                >
-                  Почему противоречит ТЗ (пункт договора)
-                </label>
-                <input
-                  id="new-item-reason"
-                  type="text"
-                  value={newReason}
-                  onChange={(e) => setNewReason(e.target.value)}
-                  placeholder="В п. 4.1 ТЗ предусмотрен только просмотр в веб-интерфейсе."
-                  className="w-full min-h-[42px] px-3 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"
-                />
-              </div>
-            </div>
-
-            {addFormError && (
-              <p role="alert" className="text-xs text-red-600 dark:text-red-400 font-medium">
-                {addFormError}
-              </p>
-            )}
-
-            <div className="flex justify-end">
-              <button
-                type="submit"
-                className="min-h-[44px] px-4 py-2 text-xs font-semibold text-white bg-indigo-600 rounded-xl hover:bg-indigo-500 cursor-pointer"
-              >
-                Зафиксировать в реестре
-              </button>
-            </div>
-          </form>
-        )}
 
         {/* Empty State */}
         {filteredItems.length === 0 ? (
@@ -341,7 +223,7 @@ export const ScopeItemsTable: React.FC<ScopeItemsTableProps> = ({
                 return (
                   <article
                     key={item.id}
-                    className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 space-y-3"
+                    className="p-4 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 space-y-3 animate-tab-fade"
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div>
@@ -426,7 +308,7 @@ export const ScopeItemsTable: React.FC<ScopeItemsTableProps> = ({
             <div className="hidden md:block mt-4">
               <table className="w-full text-left border-collapse table-fixed">
                 <thead>
-                  <tr className="border-b border-slate-200 dark:border-slate-800 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                  <tr className="border-b border-slate-200/80 dark:border-slate-800 text-xs font-semibold text-slate-500 dark:text-slate-400">
                     <th className="py-3 pr-3 w-[44%]">
                       Позиция вне ТЗ и юридическое обоснование
                     </th>
@@ -439,7 +321,7 @@ export const ScopeItemsTable: React.FC<ScopeItemsTableProps> = ({
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-200 dark:divide-slate-800 text-xs">
+                <tbody className="divide-y divide-slate-200/80 dark:divide-slate-800 text-xs">
                   {filteredItems.map((item) => {
                     const itemCost = item.suggested_hours * hourlyRate;
                     return (
@@ -461,7 +343,7 @@ export const ScopeItemsTable: React.FC<ScopeItemsTableProps> = ({
                             {item.scope_conflict_reason}
                           </p>
 
-                          <div className="mt-2 flex items-center gap-1.5 text-xs">
+                          <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs border border-transparent bg-slate-100/80 dark:bg-slate-800/80">
                             {item.severity === 'critical' ? (
                               <ShieldAlert className="w-3.5 h-3.5 text-red-600 dark:text-red-400 shrink-0" />
                             ) : item.severity === 'medium' ? (
@@ -550,9 +432,9 @@ export const ScopeItemsTable: React.FC<ScopeItemsTableProps> = ({
       {/* Confirmed In-Scope Items Section */}
       <section
         aria-label="Подтвержденные пункты в рамках ТЗ"
-        className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 sm:p-6"
+        className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 sm:p-6 shadow-sm"
       >
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-4 border-b border-slate-200 dark:border-slate-800">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-4 border-b border-slate-200/80 dark:border-slate-800">
           <div>
             <h2 className="text-base font-bold text-slate-900 dark:text-white">
               03. Подтверждено в рамках текущего ТЗ и базовой сметы
@@ -595,16 +477,245 @@ export const ScopeItemsTable: React.FC<ScopeItemsTableProps> = ({
             value={newInScopeText}
             onChange={(e) => setNewInScopeText(e.target.value)}
             placeholder="Добавить подтвержденный пункт из текущего ТЗ..."
-            className="flex-1 min-h-[44px] px-3.5 py-2 text-xs bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-800 focus:border-indigo-500 focus:outline-none"
+            className="flex-1 min-h-[44px] px-3.5 py-2 text-xs bg-slate-50 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-800 focus:border-indigo-500 focus:outline-none"
           />
           <button
             type="submit"
-            className="min-h-[44px] px-4 py-2 text-xs font-semibold text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl whitespace-nowrap shrink-0 cursor-pointer"
+            className="min-h-[44px] px-4 py-2 text-xs font-semibold text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl whitespace-nowrap shrink-0 cursor-pointer transition-colors"
           >
             Добавить пункт ТЗ
           </button>
         </form>
       </section>
+
+      {/* ANIMATED MODAL FOR "+ ДОБАВИТЬ ДОРАБОТКУ" */}
+      {isAddModalOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="add-item-modal-title"
+          data-testid="add-item-modal"
+          onClick={() => setIsAddModalOpen(false)}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm overflow-y-auto animate-modal-backdrop"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl max-w-xl w-full p-6 sm:p-7 shadow-xl animate-modal-content space-y-5"
+          >
+            <div className="flex items-start justify-between gap-3 pb-4 border-b border-slate-200/80 dark:border-slate-800">
+              <div>
+                <div className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">
+                  Фиксация Scope Creep в реестре
+                </div>
+                <h3
+                  id="add-item-modal-title"
+                  className="text-lg font-bold text-slate-900 dark:text-white mt-0.5"
+                >
+                  Добавить новую доработку вне ТЗ
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  Позиция автоматически войдет в Change Order и дипломатичное письмо клиенту.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAddModalOpen(false)}
+                aria-label="Закрыть окно добавления доработки"
+                className="min-h-[40px] min-w-[40px] inline-flex items-center justify-center p-2 text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateItem} className="space-y-4">
+              <div>
+                <label
+                  htmlFor="new-item-title"
+                  className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1"
+                >
+                  Краткая суть хотелки (до 6 слов)
+                </label>
+                <input
+                  id="new-item-title"
+                  type="text"
+                  value={newTitle}
+                  onChange={(e) => setNewTitle(e.target.value)}
+                  placeholder="Напр.: Двусторонняя синхронизация с 1С"
+                  className="w-full min-h-[44px] px-3.5 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-900 focus:border-indigo-500 focus:outline-none"
+                />
+              </div>
+
+              {/* Interactive Severity Selector Cards */}
+              <div>
+                <span className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                  Уровень критичности и влияния на архитектуру
+                </span>
+                <div className="grid grid-cols-3 gap-2.5">
+                  {(
+                    [
+                      {
+                        id: 'low',
+                        label: 'Низкий',
+                        sub: 'UI / мелкие правки',
+                        activeClass:
+                          'border-slate-700 bg-slate-900 text-white dark:border-indigo-500 dark:bg-indigo-950/60',
+                      },
+                      {
+                        id: 'medium',
+                        label: 'Средний',
+                        sub: 'Новый модуль / API',
+                        activeClass:
+                          'border-amber-500 bg-amber-50 text-amber-900 dark:bg-amber-950/50 dark:text-amber-200',
+                      },
+                      {
+                        id: 'critical',
+                        label: 'Критичный',
+                        sub: 'Ядро / БД / ERP',
+                        activeClass:
+                          'border-red-500 bg-red-50 text-red-900 dark:bg-red-950/50 dark:text-red-200',
+                      },
+                    ] as const
+                  ).map((sev) => {
+                    const active = newSeverity === sev.id;
+                    return (
+                      <button
+                        key={sev.id}
+                        type="button"
+                        onClick={() => setNewSeverity(sev.id)}
+                        className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                          active
+                            ? sev.activeClass
+                            : 'border-slate-200 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-800/50 text-slate-700 dark:text-slate-300 hover:border-indigo-400'
+                        }`}
+                      >
+                        <div className="text-xs font-bold">{sev.label}</div>
+                        <div className="text-[10px] opacity-80 mt-0.5">
+                          {sev.sub}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Hours Input + Quick Presets + Real-Time Cost Preview */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 items-stretch">
+                <div className="space-y-2">
+                  <label
+                    htmlFor="new-item-hours"
+                    className="block text-xs font-semibold text-slate-700 dark:text-slate-300"
+                  >
+                    Оценка трудозатрат (1–40 нормо-ч)
+                  </label>
+                  <input
+                    id="new-item-hours"
+                    type="number"
+                    min={1}
+                    max={40}
+                    value={newHours}
+                    onChange={(e) => setNewHours(Number(e.target.value))}
+                    className="w-full min-h-[44px] px-3.5 py-2 text-sm font-mono tabular-nums font-bold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:border-indigo-500 focus:outline-none"
+                  />
+                  <div className="flex items-center gap-1.5">
+                    {HOUR_PRESETS.map((presetH) => (
+                      <button
+                        key={presetH}
+                        type="button"
+                        onClick={() => setNewHours(presetH)}
+                        className={`px-2 py-1 text-[11px] font-mono tabular-nums rounded-lg border transition-colors cursor-pointer ${
+                          safeNewHours === presetH
+                            ? 'bg-indigo-600 text-white border-indigo-600 font-semibold'
+                            : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-indigo-400'
+                        }`}
+                      >
+                        {presetH}ч
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Live Cost & Deadline Shift Calculation Box */}
+                <div
+                  data-testid="live-item-cost-preview"
+                  className="p-3.5 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200/80 dark:border-indigo-900/60 flex flex-col justify-between"
+                >
+                  <div className="flex items-center gap-1.5 text-[11px] font-semibold text-indigo-700 dark:text-indigo-300">
+                    <Calculator className="w-3.5 h-3.5" />
+                    <span>Расчет стоимости в реальном времени</span>
+                  </div>
+                  <div className="mt-2">
+                    <div className="text-lg font-bold font-mono tabular-nums text-indigo-600 dark:text-indigo-400">
+                      +{formatMoney(liveItemCost, currency)}
+                    </div>
+                    <div className="text-[11px] font-mono tabular-nums text-slate-600 dark:text-slate-400 mt-0.5">
+                      {safeNewHours} ч × {formatMoney(hourlyRate, currency)}/ч · Сдвиг +{liveShiftDays} раб. дн.
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label
+                  htmlFor="new-item-quote"
+                  className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1"
+                >
+                  Точная цитата заказчика и таймкод
+                </label>
+                <input
+                  id="new-item-quote"
+                  type="text"
+                  value={newQuote}
+                  onChange={(e) => setNewQuote(e.target.value)}
+                  placeholder="[18:20] «Давайте еще кнопку выгрузки презентации в PDF»"
+                  className="w-full min-h-[44px] px-3.5 py-2 text-xs font-mono bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-900 focus:border-indigo-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="new-item-reason"
+                  className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1"
+                >
+                  Почему противоречит ТЗ (пункт договора)
+                </label>
+                <input
+                  id="new-item-reason"
+                  type="text"
+                  value={newReason}
+                  onChange={(e) => setNewReason(e.target.value)}
+                  placeholder="В п. 4.1 ТЗ предусмотрен только просмотр в веб-интерфейсе."
+                  className="w-full min-h-[44px] px-3.5 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-900 focus:border-indigo-500 focus:outline-none"
+                />
+              </div>
+
+              {addFormError && (
+                <p
+                  role="alert"
+                  className="text-xs text-red-600 dark:text-red-400 font-medium"
+                >
+                  {addFormError}
+                </p>
+              )}
+
+              <div className="pt-2 flex items-center justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setIsAddModalOpen(false)}
+                  className="min-h-[44px] px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white rounded-xl cursor-pointer"
+                >
+                  Отмена
+                </button>
+                <button
+                  type="submit"
+                  className="min-h-[44px] px-5 py-2.5 text-xs font-semibold text-white bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 rounded-xl shadow-sm transition-all cursor-pointer"
+                >
+                  Зафиксировать в реестре
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

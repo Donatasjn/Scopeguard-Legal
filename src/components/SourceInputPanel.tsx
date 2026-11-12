@@ -469,30 +469,51 @@ export const SourceInputPanel: React.FC<SourceInputPanelProps> = ({
           </div>
         </div>
 
-        {/* Multi-Step File Upload & Scope Analysis Progress Indicator */}
+        {/* Multi-Step Neural Scope Analysis Progress Indicator */}
         {isAnalyzing && (
           <div
             data-testid="analysis-progress-panel"
             role="status"
             aria-live="polite"
-            className="p-4 rounded-xl bg-slate-900 dark:bg-indigo-950/90 border border-slate-800 dark:border-indigo-800 text-white space-y-2.5"
+            className="p-4 sm:p-5 rounded-2xl bg-slate-900 dark:bg-indigo-950/90 border border-slate-800 dark:border-indigo-800 text-white space-y-3 shadow-lg animate-tab-fade"
           >
             <div className="flex items-center justify-between text-xs font-semibold">
-              <span>{analysisStepText || 'Обработка файла...'}</span>
-              <span className="font-mono tabular-nums">{analysisProgress}%</span>
+              <span className="text-indigo-200">
+                {analysisStepText || 'Читаем ТЗ...'}
+              </span>
+              <span className="font-mono tabular-nums text-white">
+                {analysisProgress}%
+              </span>
             </div>
-            <div className="w-full h-2 bg-slate-700 rounded-full overflow-hidden">
+            <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
               <div
-                className="h-full bg-indigo-400 transition-all duration-300"
+                className="h-full bg-gradient-to-r from-indigo-500 to-violet-400 transition-all duration-300"
                 style={{
-                  width: `${Math.min(100, Math.max(8, analysisProgress))}%`,
+                  width: `${Math.min(100, Math.max(10, analysisProgress))}%`,
                 }}
               />
             </div>
-            <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-300 font-mono">
-              <span>1. Обработка файла</span>
-              <span>2. Сверка условий ТЗ</span>
-              <span>3. Смета Change Order</span>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px] font-mono">
+              {[
+                { label: 'Читаем ТЗ...', threshold: 15 },
+                { label: 'Сверяем стенограмму...', threshold: 40 },
+                { label: 'Считаем нормо-часы...', threshold: 65 },
+                { label: 'Формируем обоснование...', threshold: 85 },
+              ].map((step) => {
+                const reached = analysisProgress >= step.threshold;
+                return (
+                  <span
+                    key={step.label}
+                    className={`truncate transition-colors ${
+                      reached
+                        ? 'text-indigo-300 font-semibold'
+                        : 'text-slate-500'
+                    }`}
+                  >
+                    {step.label}
+                  </span>
+                );
+              })}
             </div>
           </div>
         )}
@@ -512,12 +533,12 @@ export const SourceInputPanel: React.FC<SourceInputPanelProps> = ({
             type="submit"
             data-testid="submit-audit-btn"
             disabled={isAnalyzing}
-            className="w-full min-h-[48px] inline-flex items-center justify-center gap-2 px-5 py-3 text-xs sm:text-sm font-bold text-white bg-indigo-600 rounded-xl hover:bg-indigo-500 disabled:opacity-60 transition-colors cursor-pointer shadow-xs"
+            className="w-full min-h-[48px] inline-flex items-center justify-center gap-2 px-5 py-3 text-xs sm:text-sm font-bold text-white bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 disabled:opacity-60 rounded-xl transition-all cursor-pointer shadow-sm"
           >
             <Play className="w-4 h-4" />
             <span>
               {isAnalyzing
-                ? analysisStepText || 'Выполняется сверка с ТЗ...'
+                ? analysisStepText || 'Читаем ТЗ...'
                 : 'Запустить юридический аудит Scope Creep'}
             </span>
           </button>

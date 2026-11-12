@@ -1,5 +1,5 @@
 {
-  "name": "ScopeGuard — Защита от Scope Creep",
+  "name": "ScopeGuard Legal — Защита бюджета проектов от Scope Creep",
   "description": "Инструмент проджект-менеджера и IT-юриста для сверки ТЗ с записями переговоров, выявления дополнительных работ (Scope Creep), оценки часов и генерации Change Order.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]

@@ -20,13 +20,14 @@ import {
   type CurrencyCode,
   type FreemiumState,
 } from '../utils/scopeAnalyzer';
+import { BrandLogoIcon } from './BrandLogo';
 
 interface LandingPageProps {
   currency: CurrencyCode;
   hourlyRate: number;
   freemiumState: FreemiumState;
   onStartFreeAudit: () => void;
-  onViewSampleReport: () => void;
+  onOpenSampleModal: () => void;
   onOpenHistory: () => void;
 }
 
@@ -35,7 +36,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   hourlyRate,
   freemiumState,
   onStartFreeAudit,
-  onViewSampleReport,
+  onOpenSampleModal,
   onOpenHistory,
 }) => {
   const sampleProtectedHours = 46;
@@ -108,26 +109,29 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   return (
     <div
       data-testid="landing-page"
-      className="space-y-8 sm:space-y-12 pb-6 text-slate-900 dark:text-slate-100"
+      className="space-y-8 sm:space-y-12 pb-6 text-slate-900 dark:text-slate-100 animate-tab-fade"
     >
       {/* 1. HERO SECTION */}
       <section
         data-testid="landing-hero"
         aria-label="О продукте ScopeGuard Legal"
-        className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-8 lg:p-10"
+        className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 sm:p-8 lg:p-10 shadow-sm"
       >
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-stretch">
           {/* Left Column: Value Proposition & Primary Actions */}
           <div className="xl:col-span-7 flex flex-col justify-between space-y-6">
             <div className="space-y-4">
               <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-                <span className="font-semibold text-indigo-600 dark:text-indigo-400">
-                  ScopeGuard Legal B2B
+                <BrandLogoIcon className="w-5 h-5 shrink-0" />
+                <span className="font-bold text-slate-900 dark:text-white">
+                  ScopeGuard Legal
                 </span>
                 <span aria-hidden="true">·</span>
                 <span>Юридическая и техническая защита ИТ-исполнителей</span>
                 <span aria-hidden="true">·</span>
-                <span className="font-mono tabular-nums">Аудит за 30 сек</span>
+                <span className="font-mono tabular-nums text-indigo-600 dark:text-indigo-400 font-semibold">
+                  Аудит за 30 сек
+                </span>
               </div>
 
               <h1 className="text-2xl sm:text-4xl lg:text-[42px] font-bold tracking-tight text-slate-900 dark:text-white leading-[1.15] text-balance">
@@ -150,7 +154,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   type="button"
                   data-testid="landing-cta-start"
                   onClick={onStartFreeAudit}
-                  className="min-h-[48px] inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-500 rounded-xl transition-colors cursor-pointer whitespace-nowrap"
+                  className="min-h-[48px] inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-semibold text-white bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 rounded-xl shadow-sm transition-all cursor-pointer whitespace-nowrap"
                 >
                   <span>Запустить бесплатный аудит</span>
                   <ArrowRight className="w-4 h-4 shrink-0" />
@@ -159,8 +163,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <button
                   type="button"
                   data-testid="landing-cta-sample"
-                  onClick={onViewSampleReport}
-                  className="min-h-[48px] inline-flex items-center justify-center gap-2 px-5 py-3 text-sm font-semibold text-slate-800 dark:text-slate-100 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-xl transition-colors cursor-pointer whitespace-nowrap"
+                  onClick={onOpenSampleModal}
+                  className="min-h-[48px] inline-flex items-center justify-center gap-2 px-5 py-3 text-sm font-semibold text-slate-800 dark:text-slate-100 bg-slate-100/90 dark:bg-slate-800 hover:bg-slate-200/80 dark:hover:bg-slate-700 border border-slate-200/80 dark:border-slate-700 rounded-xl transition-all cursor-pointer whitespace-nowrap"
                 >
                   <FileSearch className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
                   <span>Посмотреть пример отчета</span>
@@ -178,8 +182,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </div>
 
           {/* Right Column: Live Legal Audit Specimen Card */}
-          <div className="xl:col-span-5 flex flex-col justify-between bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-5 sm:p-6 space-y-4">
-            <div className="flex items-center justify-between gap-2 pb-3 border-b border-slate-200 dark:border-slate-800">
+          <div className="xl:col-span-5 flex flex-col justify-between bg-slate-50/90 dark:bg-slate-950 border border-slate-200/80 dark:border-slate-800 rounded-xl p-5 sm:p-6 space-y-4">
+            <div className="flex items-center justify-between gap-2 pb-3 border-b border-slate-200/80 dark:border-slate-800">
               <div>
                 <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400">
                   ПРИМЕР ОБНАРУЖЕНИЯ SCOPE CREEP
@@ -194,7 +198,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </div>
 
             <div className="space-y-3 text-xs">
-              <div className="p-3.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1.5">
+              <div className="p-3.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 space-y-1.5">
                 <div className="font-mono text-[11px] text-indigo-600 dark:text-indigo-400 font-semibold">
                   Цитата созвона [14:20]
                 </div>
@@ -205,7 +209,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 </p>
               </div>
 
-              <div className="p-3.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1.5">
+              <div className="p-3.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 space-y-1.5">
                 <div className="font-mono text-[11px] text-slate-500 dark:text-slate-400 font-semibold">
                   Юридическое обоснование расхождения с ТЗ
                 </div>
@@ -217,7 +221,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               </div>
             </div>
 
-            <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between gap-4">
+            <div className="pt-3 border-t border-slate-200/80 dark:border-slate-800 flex items-center justify-between gap-4">
               <div>
                 <div className="text-[11px] text-slate-500 dark:text-slate-400">
                   Защищенный бюджет по Change Order
@@ -237,7 +241,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         </div>
 
         {/* Full-Width 4-Column Quantitative Proof Row below Hero Split */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 pt-6 mt-6 border-t border-slate-200 dark:border-slate-800">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 pt-6 mt-6 border-t border-slate-200/80 dark:border-slate-800">
           <div>
             <div className="text-xl sm:text-2xl font-bold font-mono tabular-nums text-slate-900 dark:text-white">
               30 секунд
@@ -298,7 +302,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           {steps.map((step) => (
             <div
               key={step.num}
-              className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 flex flex-col justify-between space-y-4"
+              className="card-hover-lift bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 shadow-xs hover:shadow-md flex flex-col justify-between space-y-4"
             >
               <div className="space-y-3">
                 <div className="text-lg font-bold font-mono tabular-nums text-indigo-600 dark:text-indigo-400">
@@ -336,7 +340,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
           {/* Feature 1: Span 7 */}
-          <div className="lg:col-span-7 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 space-y-3">
+          <div className="card-hover-lift lg:col-span-7 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 shadow-xs hover:shadow-md space-y-3">
             <div className="flex items-center justify-between gap-3">
               <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
                 <Clock className="w-5 h-5" />
@@ -358,7 +362,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </div>
 
           {/* Feature 2: Span 5 */}
-          <div className="lg:col-span-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 space-y-3">
+          <div className="card-hover-lift lg:col-span-5 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 shadow-xs hover:shadow-md space-y-3">
             <div className="flex items-center justify-between gap-3">
               <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
                 <Calculator className="w-5 h-5" />
@@ -379,7 +383,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </div>
 
           {/* Feature 3: Span 5 */}
-          <div className="lg:col-span-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 space-y-3">
+          <div className="card-hover-lift lg:col-span-5 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 shadow-xs hover:shadow-md space-y-3">
             <div className="flex items-center justify-between gap-3">
               <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
                 <MailCheck className="w-5 h-5" />
@@ -400,7 +404,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </div>
 
           {/* Feature 4: Span 7 */}
-          <div className="lg:col-span-7 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 space-y-3">
+          <div className="card-hover-lift lg:col-span-7 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 shadow-xs hover:shadow-md space-y-3">
             <div className="flex items-center justify-between gap-3">
               <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
                 <Scale className="w-5 h-5" />
@@ -443,7 +447,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             return (
               <div
                 key={item.title}
-                className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 flex flex-col justify-between space-y-4"
+                className="card-hover-lift bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 shadow-xs hover:shadow-md flex flex-col justify-between space-y-4"
               >
                 <div className="space-y-3">
                   <div className="flex items-center justify-between gap-3">
@@ -476,7 +480,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       <section
         data-testid="landing-bottom-cta"
         aria-label="Запустить бесплатную проверку"
-        className="bg-slate-900 dark:bg-indigo-950/60 border border-slate-800 dark:border-indigo-900/60 rounded-2xl p-6 sm:p-8 lg:p-10 text-white"
+        className="bg-slate-900 dark:bg-indigo-950/60 border border-slate-800 dark:border-indigo-900/60 rounded-2xl p-6 sm:p-8 lg:p-10 text-white shadow-xl"
       >
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
           <div className="space-y-2 max-w-2xl">
@@ -490,7 +494,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </h2>
             <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
               Загрузите текущее ТЗ и запись последнего созвона с заказчиком или
-              изучите готовые кейсы из библиотеки проверок.
+              изучите интерактивный пример реального отчета.
             </p>
           </div>
 
@@ -499,7 +503,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               type="button"
               data-testid="landing-bottom-cta-start"
               onClick={onStartFreeAudit}
-              className="min-h-[48px] inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-500 rounded-xl transition-colors cursor-pointer whitespace-nowrap"
+              className="min-h-[48px] inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-semibold text-white bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 rounded-xl shadow-sm transition-all cursor-pointer whitespace-nowrap"
             >
               <span>Перейти к аудиту ТЗ</span>
               <ArrowRight className="w-4 h-4 shrink-0" />

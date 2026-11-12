@@ -117,10 +117,11 @@ export const PricingModal: React.FC<PricingModalProps> = ({
 
   const innerContent = (
     <div
+      onClick={(e) => e.stopPropagation()}
       className={
         inlineMode
-          ? 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 sm:p-8'
-          : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-4xl w-full p-6 sm:p-8 shadow-xl my-8'
+          ? 'bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 sm:p-8 shadow-sm animate-tab-fade'
+          : 'bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl max-w-4xl w-full p-6 sm:p-8 shadow-xl my-8 animate-modal-content'
       }
     >
       {/* Header with Currency Switcher */}
@@ -571,7 +572,11 @@ export const PricingModal: React.FC<PricingModalProps> = ({
       role="dialog"
       aria-modal="true"
       aria-labelledby="pricing-modal-title"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs overflow-y-auto"
+      onClick={() => {
+        setSelectedPlan(null);
+        onClose();
+      }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm overflow-y-auto animate-modal-backdrop"
     >
       {innerContent}
     </div>

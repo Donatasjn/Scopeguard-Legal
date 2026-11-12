@@ -12,6 +12,8 @@ import { DeliverablesView } from './components/DeliverablesView';
 import { AuditHistoryView } from './components/AuditHistoryView';
 import { LandingPage } from './components/LandingPage';
 import { PricingModal } from './components/PricingModal';
+import { SampleReportModal } from './components/SampleReportModal';
+import { ToastContainer, type ToastItem } from './components/ToastContainer';
 import { OfficialChangeOrderPrintModal } from './components/OfficialChangeOrderPrintModal';
 import { AUDIT_PRESETS, type AuditPreset } from './data/presets';
 import {
@@ -223,6 +225,24 @@ export default function App() {
 
   // Official Print / PDF Sheet Modal State
   const [isPrintModalOpen, setIsPrintModalOpen] = useState<boolean>(false);
+  const [isSampleModalOpen, setIsSampleModalOpen] = useState<boolean>(false);
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
+
+  const addToast = (
+    title: string,
+    description?: string,
+    variant: ToastItem['variant'] = 'success'
+  ) => {
+    const id = `toast-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    setToasts((prev) => [...prev.slice(-2), { id, title, description, variant }]);
+    window.setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 3600);
+  };
+
+  const dismissToast = (id: string) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  };
 
   // Sync dark class on documentElement
   useEffect(() => {
@@ -371,24 +391,23 @@ export default function App() {
 
     setValidationError(null);
     setIsAnalyzing(true);
-    setAnalysisStepText(
-      specFile || transcriptFile
-        ? 'Обработка файла и передача в Gemini File API...'
-        : 'Обработка исходных документов...'
-    );
-    setAnalysisProgress(25);
+    setAnalysisStepText('Читаем ТЗ...');
+    setAnalysisProgress(20);
 
     const stepTimer1 = window.setTimeout(() => {
-      setAnalysisStepText('Сверка условий ТЗ и поиск скрытых доработок...');
-      setAnalysisProgress(65);
-    }, 280);
+      setAnalysisStepText('Сверяем стенограмму...');
+      setAnalysisProgress(48);
+    }, 220);
 
     const stepTimer2 = window.setTimeout(() => {
-      setAnalysisStepText(
-        'Формирование Change Order и дипломатичного письма...'
-      );
-      setAnalysisProgress(90);
-    }, 560);
+      setAnalysisStepText('Считаем нормо-часы...');
+      setAnalysisProgress(74);
+    }, 440);
+
+    const stepTimer3 = window.setTimeout(() => {
+      setAnalysisStepText('Формируем юридическое обоснование...');
+      setAnalysisProgress(92);
+    }, 660);
 
     try {
       const formData = new FormData();
@@ -458,6 +477,11 @@ export default function App() {
       });
       setHistoryEntries((prev) => upsertAuditHistoryEntry(prev, savedEntry));
       setActiveHistoryId(savedEntry.id);
+      addToast(
+        'Юридический аудит завершен и сохранен',
+        `Проект «${finalProjectName}»: выявлено ${validated.out_of_scope_items.length} поз. вне ТЗ.`,
+        'document'
+      );
     } catch (err) {
       setValidationError(
         err instanceof Error
@@ -467,6 +491,7 @@ export default function App() {
     } finally {
       window.clearTimeout(stepTimer1);
       window.clearTimeout(stepTimer2);
+      window.clearTimeout(stepTimer3);
       setIsAnalyzing(false);
       setAnalysisStepText('');
       setAnalysisProgress(0);
@@ -547,6 +572,11 @@ export default function App() {
       { id: nextId, ...newItem },
     ];
     syncDeliverablesWithItems(nextItems, report.in_scope_items);
+    addToast(
+      `Доработка «${newItem.title}» добавлена`,
+      `Оценка +${newItem.suggested_hours} ч включена в расчет Change Order и письма.`,
+      'success'
+    );
   };
 
   const handleAddInScopeItem = (text: string) => {
@@ -579,17 +609,23 @@ export default function App() {
     );
     setIsQuotaPaywallTriggered(false);
     setIsPricingModalOpen(false);
+    addToast(
+      `Тариф ${tier === 'agency' ? 'Agency Unlimited' : 'Freelance Pro'} активирован`,
+      'Лимиты проверок и функции экспорта документов успешно обновлены.',
+      'success'
+    );
   };
 
   const handleResetDemoQuota = () => {
     setFreemiumState(createInitialFreemiumState());
     setIsQuotaPaywallTriggered(false);
+    addToast('Демо-лимит сброшен', 'Доступно 2 из 2 бесплатных аудитов.', 'info');
   };
 
   return (
     <div
       id="top"
-      className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 pb-16 lg:pb-0 transition-colors"
+      className="min-h-screen flex flex-col bg-[#F8FAFC] dark:bg-slate-950 text-slate-900 dark:text-slate-100 pb-16 lg:pb-0 transition-colors"
     >
       <TopBar
         activeTab={activeTab}
@@ -634,11 +670,7 @@ export default function App() {
                 setActiveTab('audit');
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
-              onViewSampleReport={() => {
-                handleSelectPreset(AUDIT_PRESETS[0]);
-                setActiveTab('audit');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }}
+              onOpenSampleModal={() => setIsSampleModalOpen(true)}
               onOpenHistory={() => {
                 setActiveTab('history');
                 window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -653,9 +685,9 @@ export default function App() {
               <section
                 id="audit"
                 aria-label="Сводка защиты бюджета проекта"
-                className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 sm:p-6"
+                className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 sm:p-6 shadow-sm animate-tab-fade"
               >
-                <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 pb-5 border-b border-slate-200 dark:border-slate-800">
+                <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 pb-5 border-b border-slate-200/80 dark:border-slate-800">
                   <div>
                     <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
                       <span>{freemiumState.agencyBrandName}</span>
@@ -683,8 +715,15 @@ export default function App() {
 
                     <button
                       type="button"
-                      onClick={() => setIsPrintModalOpen(true)}
-                      className="min-h-[44px] inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 rounded-xl transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+                      onClick={() => {
+                        setIsPrintModalOpen(true);
+                        addToast(
+                          'Официальный бланк Change Order сформирован',
+                          'Готов к печати, сохранению в PDF или выгрузке в Word.',
+                          'document'
+                        );
+                      }}
+                      className="min-h-[44px] inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 rounded-xl shadow-xs transition-all whitespace-nowrap shrink-0 cursor-pointer"
                     >
                       <Printer className="w-3.5 h-3.5" />
                       <span>Экспорт Change Order в PDF / Печать</span>
@@ -692,9 +731,9 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* 4-Column Tabular KPI Strip */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 pt-5">
-                  <div>
+                {/* 4-Column Tabular KPI Strip with subtle hover lift */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 pt-5">
+                  <div className="card-hover-lift p-3.5 rounded-xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200/70 dark:border-slate-800">
                     <div className="text-xs text-slate-500 dark:text-slate-400">
                       Выявлено новых хотелок
                     </div>
@@ -717,7 +756,7 @@ export default function App() {
                     </div>
                   </div>
 
-                  <div>
+                  <div className="card-hover-lift p-3.5 rounded-xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200/70 dark:border-slate-800">
                     <div className="text-xs text-slate-500 dark:text-slate-400">
                       Объем доработок сверх сметы
                     </div>
@@ -732,7 +771,7 @@ export default function App() {
                     </div>
                   </div>
 
-                  <div>
+                  <div className="card-hover-lift p-3.5 rounded-xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200/70 dark:border-slate-800">
                     <div className="text-xs text-slate-500 dark:text-slate-400">
                       Защищенный бюджет (Change Order)
                     </div>
@@ -747,7 +786,7 @@ export default function App() {
                     </div>
                   </div>
 
-                  <div>
+                  <div className="card-hover-lift p-3.5 rounded-xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200/70 dark:border-slate-800">
                     <div className="text-xs text-slate-500 dark:text-slate-400">
                       Правовое влияние на график
                     </div>
@@ -770,7 +809,14 @@ export default function App() {
                 <div className="xl:col-span-5">
                   <SourceInputPanel
                     selectedPresetId={selectedPresetId}
-                    onSelectPreset={handleSelectPreset}
+                    onSelectPreset={(preset) => {
+                      handleSelectPreset(preset);
+                      addToast(
+                        `Загружен шаблон «${preset.label}»`,
+                        'Исходное ТЗ, стенограмма и реестр правок синхронизированы.',
+                        'info'
+                      );
+                    }}
                     projectName={projectName}
                     onChangeProjectName={(val) => {
                       setProjectName(val);
@@ -865,7 +911,15 @@ export default function App() {
                     report.in_scope_items
                   )
                 }
-                onOpenPrintModal={() => setIsPrintModalOpen(true)}
+                onOpenPrintModal={() => {
+                  setIsPrintModalOpen(true);
+                  addToast(
+                    'Официальный бланк Change Order открыт',
+                    'Вы можете распечатать документ в PDF или скачать в формате Word.',
+                    'document'
+                  );
+                }}
+                onNotifyToast={(title, desc) => addToast(title, desc, 'success')}
               />
             </>
           )}
@@ -876,7 +930,14 @@ export default function App() {
               entries={historyEntries}
               activeEntryId={activeHistoryId}
               currency={currency}
-              onOpenEntry={handleOpenHistoryEntry}
+              onOpenEntry={(entry) => {
+                handleOpenHistoryEntry(entry);
+                addToast(
+                  `Открыт проект «${entry.projectName}»`,
+                  'Данные отчета и смета загружены в рабочий кабинет.',
+                  'info'
+                );
+              }}
               onPrintEntry={handlePrintHistoryEntry}
               onDeleteEntry={handleDeleteHistoryEntry}
               onRestoreSeedHistory={handleRestoreSeedHistory}
@@ -906,7 +967,7 @@ export default function App() {
         </main>
       </div>
 
-      <footer className="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 py-5 px-6 mt-8 print:hidden">
+      <footer className="bg-white dark:bg-slate-900 border-t border-slate-200/80 dark:border-slate-800 py-5 px-6 mt-8 print:hidden">
         <div className="max-w-[1600px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500 dark:text-slate-400">
           <span>
             ScopeGuard Legal — Система защиты ИТ-исполнителей от несогласованного расширения объема работ
@@ -922,6 +983,23 @@ export default function App() {
         activeTab={activeTab}
         onSelectTab={setActiveTab}
         historyCount={historyEntries.length}
+      />
+
+      {/* Interactive Sample Report Preview Modal (From Landing Page) */}
+      <SampleReportModal
+        isOpen={isSampleModalOpen}
+        currency={currency}
+        onClose={() => setIsSampleModalOpen(false)}
+        onLoadPresetInWorkspace={(preset) => {
+          handleSelectPreset(preset);
+          setActiveTab('audit');
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+          addToast(
+            `Пример «${preset.label}» загружен в кабинет`,
+            'Вы можете отредактировать часы или протестировать свой документ.',
+            'info'
+          );
+        }}
       />
 
       {/* Modal Pricing & Paywall Dialog */}
@@ -961,6 +1039,9 @@ export default function App() {
         }
         tier={freemiumState.tier}
       />
+
+      {/* Bottom-Right Animated Toast Notification Stack */}
+      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
     </div>
   );
 }

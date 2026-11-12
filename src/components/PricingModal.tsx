@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Check, CreditCard, ShieldCheck, X } from 'lucide-react';
+import { Check, CreditCard, ShieldCheck, Sparkles, X } from 'lucide-react';
+import { useI18n } from '../lib/i18n';
 import {
   CURRENCY_CONFIGS,
   formatQuotaBadgeText,
@@ -27,7 +28,17 @@ interface PricingModalProps {
   onResetDemoQuota: () => void;
 }
 
-const CURRENCY_ORDER: CurrencyCode[] = ['USD', 'RUB', 'EUR', 'KZT'];
+const CURRENCY_ORDER: CurrencyCode[] = [
+  'RUB',
+  'USD',
+  'EUR',
+  'KZT',
+  'CNY',
+  'BYN',
+  'GBP',
+  'AED',
+  'JPY',
+];
 
 export const PricingModal: React.FC<PricingModalProps> = ({
   isOpen,
@@ -42,6 +53,10 @@ export const PricingModal: React.FC<PricingModalProps> = ({
   onCompleteUpgrade,
   onResetDemoQuota,
 }) => {
+  const { lang } = useI18n();
+  const isRuOrKk = lang === 'ru' || lang === 'kk';
+  const perMonthLabel = isRuOrKk ? '/ мес' : '/ mo';
+
   const [selectedPlan, setSelectedPlan] = useState<'freelance' | 'agency' | null>(
     null
   );
@@ -69,6 +84,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
 
   if (!isOpen && !inlineMode) return null;
 
+  const starterPrice = getPlanPriceDisplay('starter', currency);
   const freelancePrice = getPlanPriceDisplay('freelance', currency);
   const agencyPrice = getPlanPriceDisplay('agency', currency);
   const activePlanPrice =
@@ -120,12 +136,12 @@ export const PricingModal: React.FC<PricingModalProps> = ({
       onClick={(e) => e.stopPropagation()}
       className={
         inlineMode
-          ? 'gdocs-sheet rounded-3xl p-6 sm:p-8 animate-tab-fade'
-          : 'bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800 rounded-3xl max-w-4xl w-full p-6 sm:p-8 shadow-2xl my-8 animate-modal-content'
+          ? 'glass-card rounded-3xl p-6 sm:p-8 animate-tab-fade'
+          : 'bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800 rounded-3xl max-w-6xl w-full p-6 sm:p-8 shadow-2xl my-8 animate-modal-content'
       }
     >
-      {/* Header with Currency Switcher */}
-      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 pb-5 border-b border-slate-100 dark:border-slate-800">
+      {/* Header with Instant Multi-Currency Switcher */}
+      <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4 pb-5 border-b border-slate-200/80 dark:border-slate-800">
         <div>
           {quotaExhaustedReason && (
             <p className="text-xs font-semibold text-amber-600 dark:text-amber-400 mb-1">
@@ -134,17 +150,17 @@ export const PricingModal: React.FC<PricingModalProps> = ({
           )}
           <h2
             id="pricing-modal-title"
-            className="text-xl sm:text-2xl font-semibold text-slate-900 dark:text-white"
+            className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white"
           >
             {selectedPlan
               ? `Оформление подписки: тариф ${
                   selectedPlan === 'freelance'
-                    ? `Freelance (${freelancePrice}/мес)`
-                    : `Agency (${agencyPrice}/мес)`
+                    ? `Freelance (${freelancePrice}${perMonthLabel})`
+                    : `Pro / Studio (${agencyPrice}${perMonthLabel})`
                 }`
-              : 'Тарифные планы и лимиты проверок'}
+              : 'Тарифные планы ScopeGuard Legal'}
           </h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
             {selectedPlan
               ? `Валюта расчетов: ${CURRENCY_CONFIGS[currency].label}. Доступны локальные способы оплаты.`
               : freemiumState
@@ -153,21 +169,23 @@ export const PricingModal: React.FC<PricingModalProps> = ({
           </p>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
-          {/* Currency Pill Control */}
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
+          {/* 9-Currency Pill Switcher */}
           <div
             role="group"
             aria-label="Валюта тарифов"
-            className="flex items-center gap-1 p-1 bg-[#EDF2FA] dark:bg-slate-800 rounded-full"
+            data-testid="pricing-currency-switcher"
+            className="flex flex-wrap items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-2xl border border-slate-200/70 dark:border-slate-700"
           >
             {CURRENCY_ORDER.map((code) => (
               <button
                 key={code}
                 type="button"
+                data-testid={`pricing-currency-btn-${code}`}
                 onClick={() => onChangeCurrency(code)}
-                className={`min-h-[34px] px-3 py-1 text-xs font-mono font-semibold rounded-full transition-colors cursor-pointer ${
+                className={`min-h-[32px] px-2.5 py-1 text-xs font-mono font-bold rounded-xl transition-all cursor-pointer ${
                   currency === code
-                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-2xs'
+                    ? 'bg-indigo-600 text-white shadow-2xs'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
@@ -184,7 +202,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                 onClose();
               }}
               aria-label="Закрыть окно тарифов"
-              className="min-h-[40px] min-w-[40px] inline-flex items-center justify-center p-2 text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              className="min-h-[38px] min-w-[38px] inline-flex items-center justify-center p-2 text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
@@ -192,61 +210,130 @@ export const PricingModal: React.FC<PricingModalProps> = ({
         </div>
       </div>
 
-      {/* Step 1: Plan Selection Grid */}
+      {/* Step 1: 3-Tier Plan Selection Grid (Starter, Freelance, Pro / Studio) */}
       {!selectedPlan ? (
         <div className="mt-6 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
-            {/* Freelance Plan */}
-            <div className="border border-slate-200 dark:border-slate-800 rounded-2xl p-6 flex flex-col justify-between bg-slate-50/50 dark:bg-slate-800/40">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
+            {/* Tier 1: Starter (Бесплатный) */}
+            <div
+              data-testid="plan-card-starter"
+              className="border border-slate-200 dark:border-slate-800 rounded-3xl p-6 flex flex-col justify-between bg-slate-50/70 dark:bg-slate-800/30"
+            >
+              <div>
+                <div className="flex items-baseline justify-between gap-2">
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+                    Starter (Бесплатный)
+                  </h3>
+                  <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                    Старт за 30 секунд
+                  </span>
+                </div>
+
+                <div className="mt-4 flex items-baseline gap-1.5 font-mono tabular-nums">
+                  <span
+                    data-testid="price-starter"
+                    className="text-3xl font-extrabold text-slate-900 dark:text-white"
+                  >
+                    {starterPrice}
+                  </span>
+                  <span className="text-xs text-slate-500 dark:text-slate-400">
+                    {perMonthLabel}
+                  </span>
+                </div>
+
+                <p className="text-xs text-slate-600 dark:text-slate-400 mt-2">
+                  2 полных аудита в подарок для проверки ТЗ и записи созвона на реальном проекте.
+                </p>
+
+                <ul className="mt-5 space-y-2.5 text-xs text-slate-700 dark:text-slate-300">
+                  <li className="flex items-start gap-2">
+                    <Check className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" />
+                    <span>
+                      <strong>2 полных аудита в подарок</strong> (сверка ТЗ и стенограммы)
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Check className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" />
+                    <span>
+                      <strong>Детектор Scope Creep</strong> с точными цитатами и таймкодами
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Check className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" />
+                    <span>
+                      <strong>Дипломатичное письмо</strong> и черновик Change Order
+                    </span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="w-full min-h-[44px] py-2.5 px-5 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-2xl transition-colors cursor-pointer"
+                >
+                  {currentTier === 'free'
+                    ? 'Текущий план (Starter — 2 аудита)'
+                    : 'Базовый пакет включен'}
+                </button>
+              </div>
+            </div>
+
+            {/* Tier 2: Freelance (1 000 ₽ / $11 / 10 € / 5 200 ₸ / 80 ¥) */}
+            <div
+              data-testid="plan-card-freelance"
+              className="border border-indigo-200 dark:border-indigo-900/70 rounded-3xl p-6 flex flex-col justify-between bg-slate-50/90 dark:bg-slate-800/50"
+            >
               <div>
                 <div className="flex items-baseline justify-between gap-2">
                   <h3 className="text-lg font-bold text-slate-900 dark:text-white">
                     Freelance
                   </h3>
-                  <span className="text-xs text-slate-500 dark:text-slate-400">
-                    Для частных ПМ и фрилансеров
+                  <span className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">
+                    Для ПМ и фрилансеров
                   </span>
                 </div>
 
                 <div className="mt-4 flex items-baseline gap-1.5 font-mono tabular-nums">
                   <span
                     data-testid="price-freelance"
-                    className="text-3xl font-bold text-slate-900 dark:text-white"
+                    className="text-3xl font-extrabold text-slate-900 dark:text-white"
                   >
                     {freelancePrice}
                   </span>
                   <span className="text-xs text-slate-500 dark:text-slate-400">
-                    / мес
+                    {perMonthLabel}
                   </span>
                 </div>
 
                 <p className="text-xs text-slate-600 dark:text-slate-400 mt-2">
-                  Оптимально для ведения 3–5 активных клиентских проектов одновременно.
+                  До 25 аудитов в месяц, экспорт PDF, шаблоны писем и базовая кастомизация.
                 </p>
 
                 <ul className="mt-5 space-y-2.5 text-xs text-slate-700 dark:text-slate-300">
                   <li className="flex items-start gap-2">
                     <Check className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
                     <span>
-                      <strong>20 аудитов ТЗ и созвонов</strong> в месяц
+                      <strong>До 25 аудитов в месяц</strong> (ТЗ, договоры, аудио и стенограммы)
                     </span>
                   </li>
                   <li className="flex items-start gap-2">
                     <Check className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
                     <span>
-                      <strong>Экспорт в PDF и Word (.doc)</strong> готового листа Change Order
+                      <strong>Экспорт PDF и Word (.doc)</strong> официального листа Change Order
                     </span>
                   </li>
                   <li className="flex items-start gap-2">
                     <Check className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
                     <span>
-                      <strong>Мультивалютный калькулятор ставки</strong> ({CURRENCY_CONFIGS[currency].symbol}/ч) и сдвига сроков
+                      <strong>Шаблоны писем клиенту</strong> и базовая кастомизация ставки ({CURRENCY_CONFIGS[currency].symbol}/ч)
                     </span>
                   </li>
                   <li className="flex items-start gap-2">
                     <Check className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
                     <span>
-                      Способы оплаты: {availableMethods.join(' · ')}
+                      Оплата: {availableMethods.join(' · ')}
                     </span>
                   </li>
                 </ul>
@@ -255,81 +342,91 @@ export const PricingModal: React.FC<PricingModalProps> = ({
               <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-800">
                 <button
                   type="button"
+                  data-testid="select-freelance-btn"
                   onClick={() => setSelectedPlan('freelance')}
-                  className="w-full min-h-[44px] py-2.5 px-5 text-xs font-semibold text-white bg-slate-900 dark:bg-slate-700 hover:bg-slate-800 dark:hover:bg-slate-600 rounded-full transition-colors cursor-pointer"
+                  className="w-full min-h-[44px] py-2.5 px-5 text-xs font-bold text-white bg-slate-900 dark:bg-indigo-600 hover:bg-indigo-600 dark:hover:bg-indigo-500 rounded-2xl transition-colors cursor-pointer"
                 >
                   {currentTier === 'freelance'
-                    ? 'Продлить тариф Freelance'
-                    : 'Подключить тариф Freelance'}
+                    ? `Продлить Freelance (${freelancePrice}${perMonthLabel})`
+                    : `Подключить Freelance (${freelancePrice}${perMonthLabel})`}
                 </button>
               </div>
             </div>
 
-            {/* Agency Plan */}
-            <div className="border-2 border-indigo-600 dark:border-indigo-500 rounded-3xl p-6 flex flex-col justify-between bg-white dark:bg-slate-900">
-              <div>
-                <div className="flex items-baseline justify-between gap-2">
+            {/* Tier 3: Pro / Studio (Агентство) (2 500 ₽ / $27 / 25 € / 13 000 ₸ / 200 ¥) */}
+            <div
+              data-testid="plan-card-agency"
+              className="border-2 border-indigo-600 dark:border-indigo-500 rounded-3xl p-6 flex flex-col justify-between bg-white dark:bg-slate-900 shadow-lg relative overflow-hidden"
+            >
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute -right-10 -top-10 w-32 h-32 rounded-full bg-indigo-500/10 blur-2xl"
+              />
+              <div className="relative">
+                <div className="flex items-center justify-between gap-2">
                   <h3 className="text-lg font-bold text-slate-900 dark:text-white">
-                    Agency
+                    Pro / Studio (Агентство)
                   </h3>
-                  <span className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">
-                    Для студий и IT-агентств
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-600 text-white">
+                    <Sparkles className="w-3 h-3" />
+                    <span>Хит для студий</span>
                   </span>
                 </div>
 
                 <div className="mt-4 flex items-baseline gap-1.5 font-mono tabular-nums">
                   <span
                     data-testid="price-agency"
-                    className="text-3xl font-bold text-slate-900 dark:text-white"
+                    className="text-3xl font-extrabold text-slate-900 dark:text-white"
                   >
                     {agencyPrice}
                   </span>
                   <span className="text-xs text-slate-500 dark:text-slate-400">
-                    / мес
+                    {perMonthLabel}
                   </span>
                 </div>
 
                 <p className="text-xs text-slate-600 dark:text-slate-400 mt-2">
-                  Полная юридическая защита портфеля проектов и брендирование документов.
+                  Безлимитные аудиты, командный доступ, приоритетная модель ИИ и кастомные бланки Change Order.
                 </p>
 
                 <ul className="mt-5 space-y-2.5 text-xs text-slate-700 dark:text-slate-300">
                   <li className="flex items-start gap-2">
                     <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
                     <span>
-                      <strong>Безлимитное количество аудитов</strong> ТЗ, брифов и созвонов
+                      <strong>Безлимитные аудиты</strong> ТЗ, договоров, брифов и созвонов
                     </span>
                   </li>
                   <li className="flex items-start gap-2">
                     <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
                     <span>
-                      <strong>Кастомный логотип и бренд агентства</strong> на официальном бланке Change Order
+                      <strong>Кастомные бланки Change Order</strong> (White-Label бренд и реквизиты студии)
                     </span>
                   </li>
                   <li className="flex items-start gap-2">
                     <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
                     <span>
-                      <strong>Командный доступ</strong> для проджект-менеджеров и юристов
+                      <strong>Командный доступ</strong> и приоритетная модель ИИ
                     </span>
                   </li>
                   <li className="flex items-start gap-2">
                     <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
                     <span>
-                      Способы оплаты: {availableMethods.join(' · ')}
+                      Оплата: {availableMethods.join(' · ')}
                     </span>
                   </li>
                 </ul>
               </div>
 
-              <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-800">
+              <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-800 relative">
                 <button
                   type="button"
+                  data-testid="select-agency-btn"
                   onClick={() => setSelectedPlan('agency')}
-                  className="w-full min-h-[44px] py-2.5 px-5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 rounded-full transition-colors cursor-pointer"
+                  className="w-full min-h-[44px] py-2.5 px-5 text-xs font-bold text-white bg-gradient-to-r from-indigo-600 via-violet-600 to-emerald-500 hover:from-indigo-500 hover:to-emerald-400 rounded-2xl shadow-sm transition-all active:scale-95 cursor-pointer"
                 >
                   {currentTier === 'agency'
-                    ? 'Тариф Agency активен (Обновить)'
-                    : 'Подключить тариф Agency'}
+                    ? `Тариф Pro / Studio активен (${agencyPrice}${perMonthLabel})`
+                    : `Подключить Pro / Studio (${agencyPrice}${perMonthLabel})`}
                 </button>
               </div>
             </div>
@@ -339,8 +436,10 @@ export const PricingModal: React.FC<PricingModalProps> = ({
             <span>
               Текущий статус:{' '}
               {currentTier === 'free'
-                ? 'Базовый (Free — 2 аудита)'
-                : currentTier.toUpperCase()}{' '}
+                ? `Starter (${starterPrice}${perMonthLabel} — 2 аудита в подарок)`
+                : currentTier === 'freelance'
+                ? `Freelance (${freelancePrice}${perMonthLabel} — 25 аудитов)`
+                : `Pro / Studio (${agencyPrice}${perMonthLabel} — Безлимит)`}{' '}
               · Валюта: {CURRENCY_CONFIGS[currency].label}
             </span>
             <button
@@ -363,8 +462,8 @@ export const PricingModal: React.FC<PricingModalProps> = ({
               <div className="text-sm font-bold text-slate-900 dark:text-white">
                 Тариф{' '}
                 {selectedPlan === 'freelance'
-                  ? 'Freelance (20 аудитов/мес)'
-                  : 'Agency (Безлимит + White-Label)'}
+                  ? 'Freelance (до 25 аудитов/мес)'
+                  : 'Pro / Studio (Агентство · Безлимит + White-Label)'}
               </div>
             </div>
             <div className="text-right">
@@ -373,6 +472,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                 className="text-lg font-bold font-mono tabular-nums text-slate-900 dark:text-white"
               >
                 {activePlanPrice}
+                {perMonthLabel}
               </div>
               <button
                 type="button"

@@ -144,15 +144,38 @@ test('freemium quota allows 2 free audits then blocks until upgraded to Pro', ()
 });
 
 test('multi-currency pricing, payment methods, and Change Order formatting match specification', () => {
-  assert.equal(getPlanPriceDisplay('freelance', 'USD'), '$19');
-  assert.equal(getPlanPriceDisplay('freelance', 'RUB'), '1 800 ₽');
-  assert.equal(getPlanPriceDisplay('freelance', 'EUR'), '17.5 €');
-  assert.equal(getPlanPriceDisplay('freelance', 'KZT'), '9 000 ₸');
+  // Starter (Free) across all 9 currencies
+  assert.equal(getPlanPriceDisplay('starter', 'RUB'), '0 ₽');
+  assert.equal(getPlanPriceDisplay('starter', 'USD'), '$0');
+  assert.equal(getPlanPriceDisplay('starter', 'EUR'), '0 €');
+  assert.equal(getPlanPriceDisplay('starter', 'KZT'), '0 ₸');
+  assert.equal(getPlanPriceDisplay('starter', 'CNY'), '0 ¥');
+  assert.equal(getPlanPriceDisplay('starter', 'BYN'), '0 Br');
+  assert.equal(getPlanPriceDisplay('starter', 'GBP'), '£0');
+  assert.equal(getPlanPriceDisplay('starter', 'AED'), '0 د.إ');
+  assert.equal(getPlanPriceDisplay('starter', 'JPY'), '0 ¥');
 
-  assert.equal(getPlanPriceDisplay('agency', 'USD'), '$49');
-  assert.equal(getPlanPriceDisplay('agency', 'RUB'), '4 600 ₽');
-  assert.equal(getPlanPriceDisplay('agency', 'EUR'), '45 €');
-  assert.equal(getPlanPriceDisplay('agency', 'KZT'), '23 500 ₸');
+  // Freelance (up to 25 audits/mo) across all 9 currencies
+  assert.equal(getPlanPriceDisplay('freelance', 'RUB'), '1 000 ₽');
+  assert.equal(getPlanPriceDisplay('freelance', 'USD'), '$11');
+  assert.equal(getPlanPriceDisplay('freelance', 'EUR'), '10 €');
+  assert.equal(getPlanPriceDisplay('freelance', 'KZT'), '5 200 ₸');
+  assert.equal(getPlanPriceDisplay('freelance', 'CNY'), '80 ¥');
+  assert.equal(getPlanPriceDisplay('freelance', 'BYN'), '36 Br');
+  assert.equal(getPlanPriceDisplay('freelance', 'GBP'), '£9');
+  assert.equal(getPlanPriceDisplay('freelance', 'AED'), '40 د.إ');
+  assert.equal(getPlanPriceDisplay('freelance', 'JPY'), '1 650 ¥');
+
+  // Pro / Studio (Agency Unlimited) across all 9 currencies
+  assert.equal(getPlanPriceDisplay('agency', 'RUB'), '2 500 ₽');
+  assert.equal(getPlanPriceDisplay('agency', 'USD'), '$27');
+  assert.equal(getPlanPriceDisplay('agency', 'EUR'), '25 €');
+  assert.equal(getPlanPriceDisplay('agency', 'KZT'), '13 000 ₸');
+  assert.equal(getPlanPriceDisplay('agency', 'CNY'), '200 ¥');
+  assert.equal(getPlanPriceDisplay('agency', 'BYN'), '90 Br');
+  assert.equal(getPlanPriceDisplay('agency', 'GBP'), '£21');
+  assert.equal(getPlanPriceDisplay('agency', 'AED'), '100 د.إ');
+  assert.equal(getPlanPriceDisplay('agency', 'JPY'), '4 100 ¥');
 
   assert.deepEqual(getPaymentMethodsForCurrency('RUB'), [
     'СБП',

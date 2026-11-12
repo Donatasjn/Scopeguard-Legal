@@ -29,14 +29,17 @@ import { AuthModal } from './components/AuthModal';
 import { AccountWorkspaceView } from './components/AccountWorkspaceView';
 import { DeveloperAdminView } from './components/DeveloperAdminView';
 import { AUDIT_PRESETS, type AuditPreset } from './data/presets';
+import { I18nProvider, useI18n, type LanguageCode } from './lib/i18n';
 import {
   canUserRunAudit,
   deleteCloudAudit,
   fetchOrCreateUserProfile,
   fetchUserCloudAudits,
   loadActiveUserFromStorage,
+  loadUserSettingsFromStorage,
   logUserActivity,
   recordCompletedAuditForUser,
+  saveUserSettingsToSupabase,
   signOutCurrentUser,
   supabase,
   upgradeProfileToPro,
@@ -45,6 +48,7 @@ import {
 } from './lib/supabase';
 import {
   buildAuditHistoryEntry,
+  calculateDeadlineShiftDays,
   calculateScopeMetrics,
   canPerformAudit,
   clampSuggestedHours,
@@ -65,12 +69,14 @@ import {
   type OutOfScopeItem,
   type ScopeAuditReport,
   type SeverityLevel,
+  type UserSettings,
 } from './utils/scopeAnalyzer';
 
 const FREEMIUM_STORAGE_KEY = 'scopeguard_freemium_v1';
 const CURRENCY_STORAGE_KEY = 'scopeguard_currency_v1';
 const HISTORY_STORAGE_KEY = 'scopeguard_history_v1';
 const THEME_STORAGE_KEY = 'scopeguard_theme_v1';
+const DRAFT_STORAGE_KEY = 'scopeguard_draft_inputs_v1';
 
 type WorkspaceResultsTab = 'all' | 'registry' | 'email' | 'change-order';
 
@@ -103,10 +109,22 @@ function useAnimatedNumber(targetValue: number, durationMs = 380): number {
   return displayValue;
 }
 
+const VALID_CURRENCIES: CurrencyCode[] = [
+  'USD',
+  'RUB',
+  'EUR',
+  'CNY',
+  'KZT',
+  'BYN',
+  'GBP',
+  'AED',
+  'JPY',
+];
+
 function loadSavedCurrency(): CurrencyCode {
   try {
-    const raw = localStorage.getItem(CURRENCY_STORAGE_KEY);
-    if (raw === 'USD' || raw === 'RUB' || raw === 'EUR' || raw === 'KZT') {
+    const raw = localStorage.getItem(CURRENCY_STORAGE_KEY) as CurrencyCode | null;
+    if (raw && VALID_CURRENCIES.includes(raw)) {
       return raw;
     }
   } catch {
@@ -214,7 +232,8 @@ function loadFreemiumState(): FreemiumState {
   }
 }
 
-export default function App() {
+function AppContent() {
+  const { lang, setLang, t } = useI18n();
   const initialPreset = AUDIT_PRESETS[0];
   const initialCurrency = loadSavedCurrency();
   const initialRate = convertHourlyRate(
@@ -224,6 +243,9 @@ export default function App() {
   );
 
   const [isDark, setIsDark] = useState<boolean>(loadSavedTheme);
+  const [userSettings, setUserSettings] = useState<UserSettings>(
+    loadUserSettingsFromStorage
+  );
   // Open immediately on the new Landing Page on first visit
   const [activeTab, setActiveTab] = useState<ActiveNavTab>('landing');
   const [workspaceResultsTab, setWorkspaceResultsTab] =
@@ -372,6 +394,10 @@ export default function App() {
       agencyBrandName: currentUser.full_name || prev.agencyBrandName,
     }));
 
+    if (currentUser.settings) {
+      setUserSettings(currentUser.settings);
+    }
+
     fetchUserCloudAudits(currentUser.id, currentUser.email).then((list) => {
       setCloudAudits(list);
     });
@@ -416,14 +442,34 @@ export default function App() {
     }
   }, [historyEntries]);
 
+  // Auto-save drafts in browser if enabled in settings
+  useEffect(() => {
+    if (!userSettings.autoSaveDrafts) return;
+    try {
+      localStorage.setItem(
+        DRAFT_STORAGE_KEY,
+        JSON.stringify({ projectName, specText, transcriptText })
+      );
+    } catch {
+      // Ignore storage quota errors
+    }
+  }, [userSettings.autoSaveDrafts, projectName, specText, transcriptText]);
+
   const metrics = calculateScopeMetrics(report.out_of_scope_items, hourlyRate);
-  const shiftDays =
-    metrics.totalHours > 0 ? Math.max(1, Math.ceil(metrics.totalHours / 6)) : 0;
+  const shiftDays = calculateDeadlineShiftDays(
+    metrics.totalHours,
+    userSettings.workHoursPerDay
+  );
 
   const animatedTotalCost = useAnimatedNumber(metrics.totalCost);
   const animatedTotalHours = useAnimatedNumber(metrics.totalHours);
   const animatedItemCount = useAnimatedNumber(metrics.itemCount);
   const animatedShiftDays = useAnimatedNumber(shiftDays);
+
+  const effectiveReportLang: LanguageCode =
+    userSettings.reportLanguage === 'interface'
+      ? lang
+      : userSettings.reportLanguage;
 
   const syncDeliverablesWithItems = (
     nextOutItems: OutOfScopeItem[],
@@ -431,22 +477,36 @@ export default function App() {
     nextProject = projectName,
     nextDate = auditDate,
     nextRate = hourlyRate,
-    nextCurr = currency
+    nextCurr = currency,
+    activeSettings = userSettings
   ): ScopeAuditReport => {
     const cleanProject = nextProject.trim() || 'Проект разработки ПО';
+    const targetLang: LanguageCode =
+      activeSettings.reportLanguage === 'interface'
+        ? lang
+        : activeSettings.reportLanguage;
+    const deliverableOpts = {
+      tone: activeSettings.emailTone,
+      signature: activeSettings.defaultSignature,
+      taxNote: activeSettings.taxNote,
+      workHoursPerDay: activeSettings.workHoursPerDay,
+      reportLanguage: targetLang,
+    };
     const nextEmail = rebuildClientEmailDraft(
       cleanProject,
       nextOutItems,
       nextInItems,
       nextRate,
-      nextCurr
+      nextCurr,
+      deliverableOpts
     );
     const nextChangeOrder = rebuildChangeOrderSummary(
       cleanProject,
       nextDate,
       nextOutItems,
       nextRate,
-      nextCurr
+      nextCurr,
+      deliverableOpts
     );
     const updatedReport: ScopeAuditReport = {
       project_name: cleanProject,
@@ -458,6 +518,31 @@ export default function App() {
     };
     setReport(updatedReport);
     return updatedReport;
+  };
+
+  const handleSaveUserSettings = async (nextSettings: UserSettings) => {
+    setUserSettings(nextSettings);
+    setLang(nextSettings.interfaceLanguage);
+    if (nextSettings.defaultCurrency !== currency) {
+      setCurrency(nextSettings.defaultCurrency);
+    }
+    setHourlyRate(nextSettings.defaultHourlyRate);
+    syncDeliverablesWithItems(
+      report.out_of_scope_items,
+      report.in_scope_items,
+      projectName,
+      auditDate,
+      nextSettings.defaultHourlyRate,
+      nextSettings.defaultCurrency,
+      nextSettings
+    );
+    const updatedProfile = await saveUserSettingsToSupabase(
+      currentUser,
+      nextSettings
+    );
+    if (updatedProfile) {
+      setCurrentUser(updatedProfile);
+    }
   };
 
   const handleChangeCurrency = (nextCurrency: CurrencyCode) => {
@@ -588,6 +673,8 @@ export default function App() {
       formData.append('transcriptText', transcriptText);
       formData.append('auditDate', auditDate);
       formData.append('hourlyRate', String(hourlyRate));
+      formData.append('reportLanguage', effectiveReportLang);
+      formData.append('strictness', userSettings.strictness);
       if (specFile) {
         formData.append('specFile', specFile);
       }
@@ -979,6 +1066,11 @@ export default function App() {
               setActiveTab('history');
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
+            onChangeCurrency={handleChangeCurrency}
+            onOpenPricingModal={() => {
+              setIsQuotaPaywallTriggered(false);
+              setIsPricingModalOpen(true);
+            }}
           />
         )}
 
@@ -991,7 +1083,7 @@ export default function App() {
                 <div className="inline-flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400">
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 font-semibold border border-indigo-500/20">
                     <Sparkles className="w-3 h-3" />
-                    Рабочий кабинет ScopeGuard
+                    {t('workspace.badge')}
                   </span>
                   <span>
                     {currentUser?.full_name || freemiumState.agencyBrandName}
@@ -1000,7 +1092,7 @@ export default function App() {
                   <span>{contractNumber}</span>
                 </div>
                 <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
-                  {report.project_name || 'Аудит ТЗ и расшифровки переговоров'}
+                  {report.project_name || t('workspace.defaultTitle')}
                 </h1>
               </div>
 
@@ -1010,7 +1102,7 @@ export default function App() {
                   onClick={() => setIsSampleModalOpen(true)}
                   className="min-h-[40px] inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200/90 dark:border-slate-800 rounded-xl shadow-2xs transition-all active:scale-95 cursor-pointer"
                 >
-                  <span>Пример отчета</span>
+                  <span>{t('workspace.sampleReportBtn')}</span>
                 </button>
 
                 <button
@@ -1023,8 +1115,8 @@ export default function App() {
                   <FolderClock className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
                   <span>
                     {currentUser
-                      ? `Библиотека (${cloudAudits.length})`
-                      : `Архив (${historyEntries.length})`}
+                      ? `${t('topBar.library')} (${cloudAudits.length})`
+                      : `${t('topBar.archive')} (${historyEntries.length})`}
                   </span>
                 </button>
 
@@ -1034,7 +1126,7 @@ export default function App() {
                   className="min-h-[40px] inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 rounded-xl shadow-sm transition-all active:scale-95 cursor-pointer"
                 >
                   <Printer className="w-3.5 h-3.5" />
-                  <span>Бланк PDF / Печать</span>
+                  <span>{t('workspace.pdfPrintBtn')}</span>
                 </button>
               </div>
             </div>
@@ -1113,7 +1205,7 @@ export default function App() {
                   />
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">
-                      Защищенный бюджет
+                      {t('workspace.kpiProtectedBudget')}
                     </span>
                     <span className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
                       <ShieldCheck className="w-4 h-4" />
@@ -1126,7 +1218,7 @@ export default function App() {
                     {formatMoney(animatedTotalCost, currency)}
                   </div>
                   <div className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 font-mono tabular-nums">
-                    Ставка: {formatMoney(hourlyRate, currency)}/ч · Change Order
+                    {t('workspace.kpiRateSub')}: {formatMoney(hourlyRate, currency)}/ч · {userSettings.taxNote}
                   </div>
                 </div>
 
@@ -1134,7 +1226,7 @@ export default function App() {
                 <div className="glass-card card-hover-lift rounded-3xl p-5 sm:p-6">
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                      Часы сверх ТЗ
+                      {t('workspace.kpiHoursOut')}
                     </span>
                     <span className="w-8 h-8 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
                       <Clock className="w-4 h-4" />
@@ -1144,10 +1236,10 @@ export default function App() {
                     data-testid="metric-total-hours"
                     className="text-2xl sm:text-3xl font-extrabold font-mono tabular-nums text-slate-900 dark:text-white mt-2 tracking-tight"
                   >
-                    +{animatedTotalHours} нормо-ч
+                    +{animatedTotalHours} {t('workspace.kpiHoursUnit')}
                   </div>
                   <div className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
-                    Калибровка 1–40 ч на каждую задачу
+                    {t('workspace.kpiCalibrationSub')}
                   </div>
                 </div>
 
@@ -1155,17 +1247,20 @@ export default function App() {
                 <div className="glass-card card-hover-lift rounded-3xl p-5 sm:p-6">
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                      Сдвиг срока сдачи
+                      {t('workspace.kpiDeadlineShift')}
                     </span>
                     <span className="w-8 h-8 rounded-xl bg-violet-500/10 text-violet-600 dark:text-violet-400 flex items-center justify-center">
                       <TrendingUp className="w-4 h-4" />
                     </span>
                   </div>
-                  <div className="text-2xl sm:text-3xl font-extrabold font-mono tabular-nums text-slate-900 dark:text-white mt-2 tracking-tight">
-                    +{animatedShiftDays} раб. дн.
+                  <div
+                    data-testid="metric-shift-days"
+                    className="text-2xl sm:text-3xl font-extrabold font-mono tabular-nums text-slate-900 dark:text-white mt-2 tracking-tight"
+                  >
+                    +{animatedShiftDays} {t('workspace.kpiDaysUnit')}
                   </div>
                   <div className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
-                    Правовое продление дедлайна этапа
+                    {t('workspace.kpiDeadlineSub')} ({userSettings.workHoursPerDay}ч/дн)
                   </div>
                 </div>
 
@@ -1173,7 +1268,7 @@ export default function App() {
                 <div className="glass-card card-hover-lift rounded-3xl p-5 sm:p-6">
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                      Выявлено хотелок вне ТЗ
+                      {t('workspace.kpiFindingsCount')}
                     </span>
                     <span className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center">
                       <FileSpreadsheet className="w-4 h-4" />
@@ -1183,11 +1278,11 @@ export default function App() {
                     data-testid="metric-item-count"
                     className="text-2xl sm:text-3xl font-extrabold font-mono tabular-nums text-slate-900 dark:text-white mt-2 tracking-tight"
                   >
-                    {animatedItemCount} поз.
+                    {animatedItemCount} {t('workspace.kpiItemsUnit')}
                   </div>
                   <div className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 font-mono tabular-nums">
-                    Крит: {metrics.criticalCount} · Сред: {metrics.mediumCount}{' '}
-                    · Низ: {metrics.lowCount}
+                    {t('workspace.kpiCrit')}: {metrics.criticalCount} · {t('workspace.kpiMed')}: {metrics.mediumCount}{' '}
+                    · {t('workspace.kpiLow')}: {metrics.lowCount}
                   </div>
                 </div>
               </div>
@@ -1201,20 +1296,20 @@ export default function App() {
                 >
                   {(
                     [
-                      { id: 'all', label: 'Все разделы', icon: Layers },
+                      { id: 'all', label: t('workspace.tabAll'), icon: Layers },
                       {
                         id: 'registry',
-                        label: `Реестр (${report.out_of_scope_items.length})`,
+                        label: `${t('workspace.tabRegistry')} (${report.out_of_scope_items.length})`,
                         icon: FileSpreadsheet,
                       },
                       {
                         id: 'email',
-                        label: 'Письмо клиенту',
+                        label: t('workspace.tabEmail'),
                         icon: MailCheck,
                       },
                       {
                         id: 'change-order',
-                        label: 'Доп. соглашение',
+                        label: t('workspace.tabChangeOrder'),
                         icon: Scale,
                       },
                     ] as const
@@ -1247,7 +1342,7 @@ export default function App() {
                   className="min-h-[38px] inline-flex items-center justify-center gap-1.5 px-4 py-1.5 text-xs font-bold text-white bg-slate-900 dark:bg-indigo-600 hover:bg-indigo-600 dark:hover:bg-indigo-500 rounded-xl shadow-xs transition-all active:scale-95 cursor-pointer whitespace-nowrap"
                 >
                   <Printer className="w-3.5 h-3.5" />
-                  <span>PDF / Печать бланка</span>
+                  <span>{t('workspace.pdfPrintSheetBtn')}</span>
                 </button>
               </div>
 
@@ -1359,6 +1454,9 @@ export default function App() {
                 profile={currentUser}
                 cloudAudits={cloudAudits}
                 currency={currency}
+                onChangeCurrency={handleChangeCurrency}
+                userSettings={userSettings}
+                onSaveUserSettings={handleSaveUserSettings}
                 onProfileUpdated={(updated) => {
                   setCurrentUser(updated);
                   setFreemiumState((prev) => ({
@@ -1435,12 +1533,8 @@ export default function App() {
 
       <footer className="bg-white dark:bg-slate-900 border-t border-slate-200/80 dark:border-slate-800 py-5 px-6 mt-8 print:hidden">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500 dark:text-slate-400">
-          <span>
-            ScopeGuard Legal — Система защиты ИТ-исполнителей от несогласованного расширения объема работ
-          </span>
-          <span>
-            Supabase Cloud Auth & Database · Строгая JSON-схема · Change Order PDF/Word
-          </span>
+          <span>{t('footer.left')}</span>
+          <span>{t('footer.right')}</span>
         </div>
       </footer>
 
@@ -1540,5 +1634,13 @@ export default function App() {
       {/* Bottom-Right Animated Toast Notification Stack */}
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <I18nProvider>
+      <AppContent />
+    </I18nProvider>
   );
 }

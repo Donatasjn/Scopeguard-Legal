@@ -4,11 +4,13 @@ import {
 } from '../data/presets';
 import {
   calculateScopeMetrics,
+  createDefaultUserSettings,
   formatMoney,
   rebuildChangeOrderSummary,
   rebuildClientEmailDraft,
   type CurrencyCode,
   type ScopeAuditReport,
+  type UserSettings,
 } from '../utils/scopeAnalyzer';
 
 // Strictly configured default Supabase URL (without /rest/v1/) and publishable key
@@ -32,6 +34,7 @@ export interface UserProfile {
   audits_limit: number;
   is_admin: boolean;
   created_at: string;
+  settings?: UserSettings;
 }
 
 export interface CloudAuditRecord {
@@ -1446,3 +1449,132 @@ export async function adminAddFiveAuditsToUserInDb(
 
   return updated;
 }
+
+const LOCAL_USER_SETTINGS_KEY = 'scopeguard_user_settings_v1';
+
+export function loadUserSettingsFromStorage(): UserSettings {
+  const defaults = createDefaultUserSettings();
+  try {
+    const raw = localStorage.getItem(LOCAL_USER_SETTINGS_KEY);
+    if (!raw) return defaults;
+    const parsed = JSON.parse(raw);
+    if (typeof parsed === 'object' && parsed !== null) {
+      return {
+        ...defaults,
+        ...(parsed as Partial<UserSettings>),
+      };
+    }
+    return defaults;
+  } catch {
+    return defaults;
+  }
+}
+
+export function saveUserSettingsToStorage(settings: UserSettings): void {
+  try {
+    localStorage.setItem(LOCAL_USER_SETTINGS_KEY, JSON.stringify(settings));
+  } catch {
+    // ignore
+  }
+}
+
+export async function saveUserSettingsToSupabase(
+  profile: UserProfile | null,
+  settings: UserSettings
+): Promise<UserProfile | null> {
+  saveUserSettingsToStorage(settings);
+
+  if (!profile) return null;
+
+  const updatedProfile: UserProfile = {
+    ...profile,
+    settings,
+  };
+
+  try {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const sessionUid = sessionData?.session?.user?.id;
+    if (sessionUid && isValidUuid(sessionUid)) {
+      await supabase
+        .from('profiles')
+        .update({
+          settings_json: settings,
+        })
+        .eq('id', sessionUid);
+    }
+  } catch {
+    // Silently ignore if settings_json column is not yet added in remote table
+  }
+
+  await logUserActivity(
+    profile,
+    'Сохранение настроек',
+    `Обновлены предпочтения кабинета (${String(settings.defaultCurrency || 'RUB')}, ${String(settings.defaultHourlyRate || 4500)}/ч, ${String(settings.workHoursPerDay || 6)} ч/дн)`
+  );
+
+  return updatedProfile;
+}
+
+export function exportUserAuditsToJsonFile(audits: CloudAuditRecord[]): void {
+  const payload = {
+    exported_at: new Date().toISOString(),
+    platform: 'ScopeGuard Legal AI',
+    total_reports: audits.length,
+    reports: audits,
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {
+    type: 'application/json;charset=utf-8;',
+  });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `scopeguard-reports-${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+export function exportUserAuditsToCsvFile(audits: CloudAuditRecord[]): void {
+  const headers = [
+    'ID',
+    'Project Name',
+    'Contract Number',
+    'Audit Date',
+    'Out of Scope Items',
+    'Total Hours',
+    'Hourly Rate',
+    'Total Budget',
+    'Currency',
+  ];
+  const escapeCsv = (val: unknown) => {
+    const str = String(val ?? '').replace(/"/g, '""');
+    return `"${str}"`;
+  };
+  const rows = audits.map((a) =>
+    [
+      a.id,
+      a.project_name,
+      a.contract_number || 'Договор б/н',
+      a.audit_date,
+      a.items_count,
+      a.total_hours,
+      a.hourly_rate,
+      a.total_budget,
+      a.currency,
+    ]
+      .map(escapeCsv)
+      .join(',')
+  );
+  const csvContent = '\uFEFF' + [headers.join(','), ...rows].join('\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `scopeguard-reports-${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+

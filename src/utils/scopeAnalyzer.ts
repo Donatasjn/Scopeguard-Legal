@@ -82,7 +82,100 @@ export function calculateScopeMetrics(
   };
 }
 
-export type CurrencyCode = 'USD' | 'RUB' | 'EUR' | 'KZT';
+export type CurrencyCode =
+  | 'USD'
+  | 'RUB'
+  | 'EUR'
+  | 'CNY'
+  | 'KZT'
+  | 'BYN'
+  | 'GBP'
+  | 'AED'
+  | 'JPY';
+
+export type WorkHoursPerDayOption = 6 | 7 | 8;
+export type TaxNoteOption =
+  | 'vat_exempt'
+  | 'vat_20'
+  | 'usn'
+  | 'vat_exclusive';
+export type EmailToneOption =
+  | 'diplomatic'
+  | 'strict_legal'
+  | 'partner_backlog';
+export type StrictnessOption =
+  | 'standard'
+  | 'meticulous'
+  | 'critical_only';
+
+export type ReportLanguageCode =
+  | 'interface'
+  | 'ru'
+  | 'en'
+  | 'zh'
+  | 'es'
+  | 'de'
+  | 'fr'
+  | 'pt'
+  | 'ar'
+  | 'ja'
+  | 'kk';
+
+export interface UserSettings {
+  interfaceLanguage:
+    | 'ru'
+    | 'en'
+    | 'zh'
+    | 'es'
+    | 'de'
+    | 'fr'
+    | 'pt'
+    | 'ar'
+    | 'ja'
+    | 'kk';
+  reportLanguage: ReportLanguageCode;
+  dateFormat: 'DD.MM.YYYY' | 'MM/DD/YYYY' | 'YYYY-MM-DD';
+  timezone: string;
+  defaultCurrency: CurrencyCode;
+  defaultHourlyRate: number;
+  workHoursPerDay: WorkHoursPerDayOption;
+  taxNote: TaxNoteOption;
+  emailTone: EmailToneOption;
+  strictness: StrictnessOption;
+  defaultSignature: string;
+  emailReportCopy: boolean;
+  emailQuotaAlert: boolean;
+  autoSaveDrafts: boolean;
+}
+
+export function createDefaultUserSettings(): UserSettings {
+  return {
+    interfaceLanguage: 'ru',
+    reportLanguage: 'interface',
+    dateFormat: 'DD.MM.YYYY',
+    timezone: 'Europe/Moscow (UTC+3)',
+    defaultCurrency: 'RUB',
+    defaultHourlyRate: 4500,
+    workHoursPerDay: 6,
+    taxNote: 'vat_exempt',
+    emailTone: 'diplomatic',
+    strictness: 'standard',
+    defaultSignature:
+      'Команда управления проектом и правового сопровождения · ScopeGuard Legal Agency · legal@scopeguard.ai',
+    emailReportCopy: true,
+    emailQuotaAlert: true,
+    autoSaveDrafts: true,
+  };
+}
+
+export function calculateDeadlineShiftDays(
+  totalHours: number,
+  workHoursPerDay: WorkHoursPerDayOption = 6
+): number {
+  const safeHoursPerDay =
+    workHoursPerDay === 7 || workHoursPerDay === 8 ? workHoursPerDay : 6;
+  return Math.max(1, Math.ceil(Math.max(0, totalHours) / safeHoursPerDay));
+}
 
 export interface CurrencyConfig {
   code: CurrencyCode;
@@ -90,46 +183,50 @@ export interface CurrencyConfig {
   label: string;
   rateToUsd: number;
   defaultHourlyRate: number;
+  starterPriceDisplay: string;
   freelancePriceDisplay: string;
   agencyPriceDisplay: string;
   paymentMethods: string[];
 }
 
 export const CURRENCY_CONFIGS: Record<CurrencyCode, CurrencyConfig> = {
+  RUB: {
+    code: 'RUB',
+    symbol: '₽',
+    label: 'RUB (₽)',
+    rateToUsd: 92,
+    defaultHourlyRate: 4500,
+    starterPriceDisplay: '0 ₽',
+    freelancePriceDisplay: '1 000 ₽',
+    agencyPriceDisplay: '2 500 ₽',
+    paymentMethods: ['СБП', 'Карта Мир / РФ', 'ЮKassa / T-Bank'],
+  },
   USD: {
     code: 'USD',
     symbol: '$',
     label: 'USD ($)',
     rateToUsd: 1,
-    defaultHourlyRate: 50,
-    freelancePriceDisplay: '$19',
-    agencyPriceDisplay: '$49',
+    defaultHourlyRate: 60,
+    starterPriceDisplay: '$0',
+    freelancePriceDisplay: '$11',
+    agencyPriceDisplay: '$27',
     paymentMethods: [
       'Банковская карта (Stripe)',
       'Криптовалюта (USDT / TON)',
       'Telegram Stars',
     ],
   },
-  RUB: {
-    code: 'RUB',
-    symbol: '₽',
-    label: 'RUB (₽)',
-    rateToUsd: 95,
-    defaultHourlyRate: 4500,
-    freelancePriceDisplay: '1 800 ₽',
-    agencyPriceDisplay: '4 600 ₽',
-    paymentMethods: ['СБП', 'Карта Мир / РФ', 'ЮKassa / T-Bank'],
-  },
   EUR: {
     code: 'EUR',
     symbol: '€',
     label: 'EUR (€)',
     rateToUsd: 0.92,
-    defaultHourlyRate: 46,
-    freelancePriceDisplay: '17.5 €',
-    agencyPriceDisplay: '45 €',
+    defaultHourlyRate: 55,
+    starterPriceDisplay: '0 €',
+    freelancePriceDisplay: '10 €',
+    agencyPriceDisplay: '25 €',
     paymentMethods: [
-      'Банковская карта (Stripe)',
+      'Банковская карта (Stripe / SEPA)',
       'Криптовалюта (USDT / TON)',
       'Telegram Stars',
     ],
@@ -140,9 +237,85 @@ export const CURRENCY_CONFIGS: Record<CurrencyCode, CurrencyConfig> = {
     label: 'KZT (₸)',
     rateToUsd: 480,
     defaultHourlyRate: 24000,
-    freelancePriceDisplay: '9 000 ₸',
-    agencyPriceDisplay: '23 500 ₸',
+    starterPriceDisplay: '0 ₸',
+    freelancePriceDisplay: '5 200 ₸',
+    agencyPriceDisplay: '13 000 ₸',
     paymentMethods: ['Kaspi Pay / QR', 'Карта Казахстана (Halyk/BCC)'],
+  },
+  CNY: {
+    code: 'CNY',
+    symbol: '¥',
+    label: 'CNY (¥)',
+    rateToUsd: 7.2,
+    defaultHourlyRate: 420,
+    starterPriceDisplay: '0 ¥',
+    freelancePriceDisplay: '80 ¥',
+    agencyPriceDisplay: '200 ¥',
+    paymentMethods: [
+      'Alipay / WeChat Pay (Stripe)',
+      'UnionPay / Карта',
+      'Криптовалюта (USDT)',
+    ],
+  },
+  BYN: {
+    code: 'BYN',
+    symbol: 'Br',
+    label: 'BYN (Br)',
+    rateToUsd: 3.3,
+    defaultHourlyRate: 160,
+    starterPriceDisplay: '0 Br',
+    freelancePriceDisplay: '36 Br',
+    agencyPriceDisplay: '90 Br',
+    paymentMethods: [
+      'ЕРИП / Оплати (QR)',
+      'Карта Белкарт / Visa / Мир',
+      'Криптовалюта (USDT / TON)',
+    ],
+  },
+  GBP: {
+    code: 'GBP',
+    symbol: '£',
+    label: 'GBP (£)',
+    rateToUsd: 0.79,
+    defaultHourlyRate: 48,
+    starterPriceDisplay: '£0',
+    freelancePriceDisplay: '£9',
+    agencyPriceDisplay: '£21',
+    paymentMethods: [
+      'Банковская карта (Stripe UK)',
+      'Криптовалюта (USDT / TON)',
+      'Apple Pay / Google Pay',
+    ],
+  },
+  AED: {
+    code: 'AED',
+    symbol: 'د.إ',
+    label: 'AED (د.إ)',
+    rateToUsd: 3.67,
+    defaultHourlyRate: 220,
+    starterPriceDisplay: '0 د.إ',
+    freelancePriceDisplay: '40 د.إ',
+    agencyPriceDisplay: '100 د.إ',
+    paymentMethods: [
+      'Банковская карта (Stripe MENA)',
+      'Криптовалюта (USDT / TON)',
+      'Apple Pay / Corporate Invoice',
+    ],
+  },
+  JPY: {
+    code: 'JPY',
+    symbol: '¥',
+    label: 'JPY (¥)',
+    rateToUsd: 152,
+    defaultHourlyRate: 7500,
+    starterPriceDisplay: '0 ¥',
+    freelancePriceDisplay: '1 650 ¥',
+    agencyPriceDisplay: '4 100 ¥',
+    paymentMethods: [
+      'Банковская карта (Stripe Japan / JCB)',
+      'Apple Pay / Google Pay',
+      'Криптовалюта (USDT)',
+    ],
   },
 };
 
@@ -156,12 +329,15 @@ export function formatMoney(
 ): string {
   const cfg = getCurrencyConfig(currency);
   const rounded =
-    currency === 'USD' || currency === 'EUR'
+    currency === 'USD' || currency === 'EUR' || currency === 'GBP'
       ? Math.round(amount * 100) / 100
       : Math.round(amount);
   const formattedNum = rounded.toLocaleString('ru-RU');
   if (currency === 'USD') {
     return `$${formattedNum}`;
+  }
+  if (currency === 'GBP') {
+    return `£${formattedNum}`;
   }
   return `${formattedNum} ${cfg.symbol}`;
 }
@@ -176,16 +352,24 @@ export function convertHourlyRate(
   const toCfg = getCurrencyConfig(toCurrency);
   const inUsd = currentRate / fromCfg.rateToUsd;
   const rawTarget = inUsd * toCfg.rateToUsd;
-  if (toCurrency === 'RUB') return Math.max(500, Math.round(rawTarget / 100) * 100);
-  if (toCurrency === 'KZT') return Math.max(2000, Math.round(rawTarget / 500) * 500);
+  if (toCurrency === 'RUB' || toCurrency === 'JPY') {
+    return Math.max(500, Math.round(rawTarget / 100) * 100);
+  }
+  if (toCurrency === 'KZT') {
+    return Math.max(2000, Math.round(rawTarget / 500) * 500);
+  }
+  if (toCurrency === 'CNY' || toCurrency === 'AED' || toCurrency === 'BYN') {
+    return Math.max(20, Math.round(rawTarget / 10) * 10);
+  }
   return Math.max(5, Math.round(rawTarget));
 }
 
 export function getPlanPriceDisplay(
-  plan: 'freelance' | 'agency',
+  plan: 'starter' | 'freelance' | 'agency',
   currency: CurrencyCode
 ): string {
   const cfg = getCurrencyConfig(currency);
+  if (plan === 'starter') return cfg.starterPriceDisplay;
   return plan === 'freelance'
     ? cfg.freelancePriceDisplay
     : cfg.agencyPriceDisplay;
@@ -195,17 +379,67 @@ export function getPaymentMethodsForCurrency(currency: CurrencyCode): string[] {
   return getCurrencyConfig(currency).paymentMethods;
 }
 
+export interface DocumentGenerationOptions {
+  lang?: string;
+  workHoursPerDay?: WorkHoursPerDayOption;
+  taxNote?: TaxNoteOption;
+  emailTone?: EmailToneOption;
+  signature?: string;
+}
+
+export function getTaxClauseLabel(
+  taxNote: TaxNoteOption = 'vat_exempt',
+  lang = 'ru'
+): string {
+  const isRuOrKk = lang === 'ru' || lang === 'kk';
+  if (isRuOrKk) {
+    if (taxNote === 'vat_20') return 'включая НДС 20%';
+    if (taxNote === 'usn') return 'НДС не облагается в связи с применением УСН';
+    if (taxNote === 'vat_exclusive') return 'VAT Exclusive (без учета косвенных налогов)';
+    return 'без НДС';
+  }
+  if (taxNote === 'vat_20') return 'including 20% VAT';
+  if (taxNote === 'usn') return 'Tax Exempt (Simplified Tax Regime)';
+  if (taxNote === 'vat_exclusive') return 'VAT Exclusive';
+  return 'VAT Exempt';
+}
+
 /**
- * Generates a formal Russian legal Change Order (Дополнительное соглашение) clause.
+ * Generates a formal legal Change Order (Дополнительное соглашение) clause.
  */
 export function rebuildChangeOrderSummary(
   projectName: string,
   auditDate: string,
   items: OutOfScopeItem[],
   hourlyRate = 4500,
-  currency: CurrencyCode = 'RUB'
+  currency: CurrencyCode = 'RUB',
+  options?: DocumentGenerationOptions
 ): string {
   const metrics = calculateScopeMetrics(items, hourlyRate);
+  const workHoursPerDay = options?.workHoursPerDay ?? 6;
+  const shiftDays = calculateDeadlineShiftDays(metrics.totalHours, workHoursPerDay);
+  const lang = options?.lang || 'ru';
+  const taxText = getTaxClauseLabel(options?.taxNote ?? 'vat_exempt', lang);
+  const formattedCost = formatMoney(metrics.totalCost, currency);
+  const formattedRate = formatMoney(hourlyRate, currency);
+
+  if (lang !== 'ru' && lang !== 'kk') {
+    if (items.length === 0) {
+      return `ADDENDUM #1 (CHANGE ORDER) TO SOFTWARE DEVELOPMENT AGREEMENT ("${projectName}") dated ${auditDate}: No additional out-of-scope work beyond the approved Statement of Work (SOW) has been identified.`;
+    }
+    const linesEn = items.map(
+      (item, idx) =>
+        `1.${idx + 1}. "${item.title}" (Basis: Client request ${item.client_quote}; SOW discrepancy: ${item.scope_conflict_reason}) — estimated effort: ${clampSuggestedHours(item.suggested_hours)} hrs.`
+    );
+    return [
+      `ADDENDUM #1 (CHANGE ORDER) TO THE SOFTWARE DEVELOPMENT AGREEMENT for project "${projectName}" dated ${auditDate}.`,
+      `1. The Parties hereby agree to expand the Statement of Work (SOW) with the following additional tasks initiated by the Client during the working session:`,
+      ...linesEn,
+      `2. The total estimated additional effort of the Contractor is ${metrics.totalHours} hours. At the agreed rate of ${formattedRate}/hr, the cost of additional work amounts to ${formattedCost} (${taxText}).`,
+      `3. The delivery timeline under the Master Agreement is proportionally extended by ${shiftDays} business day(s) (calculated at ${workHoursPerDay} hrs/day) upon execution of this Change Order and receipt of prepayment.`,
+    ].join('\n');
+  }
+
   if (items.length === 0) {
     return `ДОПОЛНИТЕЛЬНОЕ СОГЛАШЕНИЕ К ДОГОВОРУ РАЗРАБОТКИ («${projectName}») от ${auditDate}: Дополнительных работ, выходящих за рамки утвержденного Технического задания, не выявлено.`;
   }
@@ -215,30 +449,95 @@ export function rebuildChangeOrderSummary(
       `1.${idx + 1}. «${item.title}» (основание: запрос Заказчика ${item.client_quote}; расхождение с ТЗ: ${item.scope_conflict_reason}) — объем трудозатрат: ${clampSuggestedHours(item.suggested_hours)} нормо-ч.`
   );
 
-  const formattedCost = formatMoney(metrics.totalCost, currency);
-  const formattedRate = formatMoney(hourlyRate, currency);
-
   return [
     `ПРИЛОЖЕНИЕ №1 (CHANGE ORDER) К ДОГОВОРУ НА РАЗРАБОТКУ ПРОГРАММНОГО ОБЕСПЕЧЕНИЯ по проекту «${projectName}» от ${auditDate}.`,
     `1. Стороны пришли к соглашению расширить перечень работ по Техническому заданию следующими дополнительными задачами, инициированными Заказчиком в ходе рабочей встречи:`,
     ...lines,
-    `2. Совокупная оценка дополнительных трудозатрат Исполнителя составляет ${metrics.totalHours} нормо-часов. При расчетной ставке ${formattedRate}/час стоимость дополнительных работ составляет ${formattedCost} (без НДС).`,
-    `3. Сроки сдачи этапа по Основному договору соразмерно сдвигаются на ${Math.max(1, Math.ceil(metrics.totalHours / 6))} рабочих дн. с момента подписания настоящего Дополнительного соглашения и внесения предоплаты.`,
+    `2. Совокупная оценка дополнительных трудозатрат Исполнителя составляет ${metrics.totalHours} нормо-часов. При расчетной ставке ${formattedRate}/час стоимость дополнительных работ составляет ${formattedCost} (${taxText}).`,
+    `3. Сроки сдачи этапа по Основному договору соразмерно сдвигаются на ${shiftDays} рабочих дн. (исходя из норматива ${workHoursPerDay} ч/день) с момента подписания настоящего Дополнительного соглашения и внесения предоплаты.`,
   ].join('\n');
 }
 
 /**
- * Generates a diplomatic, calm, non-confrontational client email in Russian.
+ * Generates a diplomatic, calm, non-confrontational client email.
  */
 export function rebuildClientEmailDraft(
   projectName: string,
   items: OutOfScopeItem[],
   inScopeItems: string[],
   hourlyRate = 4500,
-  currency: CurrencyCode = 'RUB'
+  currency: CurrencyCode = 'RUB',
+  options?: DocumentGenerationOptions
 ): ClientEmailDraft {
   const metrics = calculateScopeMetrics(items, hourlyRate);
-  const subject = `Итоги рабочей встречи по проекту «${projectName}»: фиксация договоренностей и оценка новых задач`;
+  const lang = options?.lang || 'ru';
+  const emailTone = options?.emailTone ?? 'diplomatic';
+  const taxText = getTaxClauseLabel(options?.taxNote ?? 'vat_exempt', lang);
+  const workHoursPerDay = options?.workHoursPerDay ?? 6;
+  const shiftDays = calculateDeadlineShiftDays(metrics.totalHours, workHoursPerDay);
+  const signature =
+    options?.signature?.trim() ||
+    (lang !== 'ru' && lang !== 'kk'
+      ? 'Best regards,\nProject Management & Legal Counsel Team · ScopeGuard Legal'
+      : 'С уважением,\nКоманда управления проектом и правового сопровождения');
+
+  if (lang !== 'ru' && lang !== 'kk') {
+    const subjectEn =
+      emailTone === 'strict_legal'
+        ? `Official Notice of Scope Expansion (Change Order) — Project "${projectName}"`
+        : `Meeting Follow-up for "${projectName}": Scope Alignment & New Feature Estimates`;
+
+    const inScopeBlockEn =
+      inScopeItems.length > 0
+        ? `1. CONFIRMED IN-SCOPE ITEMS (proceeding on schedule at no extra cost):\n` +
+          inScopeItems.map((entry) => `• ${entry}`).join('\n')
+        : `1. CONFIRMED IN-SCOPE ITEMS:\n• All baseline deliverables under the approved SOW are proceeding on schedule.`;
+
+    if (items.length === 0) {
+      return {
+        subject: subjectEn,
+        body: `Hello,\n\nThank you for the productive sync regarding "${projectName}". We have cross-checked all discussed items against our current Statement of Work.\n\n${inScopeBlockEn}\n\nAll discussed points fit within the approved scope. We continue development as scheduled!\n\n${signature}`,
+      };
+    }
+
+    const outOfScopeBlockEn = items
+      .map(
+        (item, index) =>
+          `${index + 1}) ${item.title} — preliminary estimate: ${clampSuggestedHours(item.suggested_hours)} hrs (${formatMoney(clampSuggestedHours(item.suggested_hours) * hourlyRate, currency)}).\n   Meeting context: ${item.client_quote}\n   SOW status: ${item.scope_conflict_reason}`
+      )
+      .join('\n\n');
+
+    const formattedCostEn = formatMoney(metrics.totalCost, currency);
+    const introEn =
+      emailTone === 'strict_legal'
+        ? `Following our working session on project "${projectName}", we have conducted a formal legal and technical comparison of the requested modifications against the signed Statement of Work (SOW).`
+        : `Thank you for the productive discussion on project "${projectName}". We carefully reviewed the meeting transcript to align expectations and protect your primary launch timeline.`;
+
+    const optionsEn =
+      emailTone === 'strict_legal'
+        ? `Required Next Steps:\nIn accordance with our Master Agreement, executing tasks outside the baseline SOW requires a signed Change Order (Addendum #1 attached) and a timeline adjustment of +${shiftDays} business day(s).`
+        : emailTone === 'partner_backlog'
+        ? `Recommended Partnership Approach:\nTo protect your upcoming release date without increasing the current sprint budget, we recommend moving these items into Phase 2 (Backlog v1.1) immediately following the initial launch — or approving a Change Order (+${shiftDays} business days) if needed in the current release.`
+        : `Proposed Options:\nOption A — Formalize these tasks in a Change Order (draft attached, +${shiftDays} business days) and include them in the current release plan.\nOption B — Keep the current sprint budget and launch date unchanged by scheduling these enhancements for Phase 2 (Backlog v1.1).`;
+
+    const bodyEn = [
+      `Hello,`,
+      introEn,
+      inScopeBlockEn,
+      `2. NEW FEATURE REQUESTS & OUT-OF-SCOPE ITEMS:\nThe following requests require additional engineering effort not included in the baseline SOW:\n\n${outOfScopeBlockEn}`,
+      `Total additional effort: ${metrics.totalHours} hrs (${formattedCostEn}, ${taxText}).`,
+      optionsEn,
+      `Please let us know which option best aligns with your current priorities and budget.`,
+      signature,
+    ].join('\n\n');
+
+    return { subject: subjectEn, body: bodyEn };
+  }
+
+  const subject =
+    emailTone === 'strict_legal'
+      ? `Уведомление о расширении объема работ по договору (Change Order) — проект «${projectName}»`
+      : `Итоги рабочей встречи по проекту «${projectName}»: фиксация договоренностей и оценка новых задач`;
 
   const inScopeBlock =
     inScopeItems.length > 0
@@ -249,7 +548,7 @@ export function rebuildClientEmailDraft(
   if (items.length === 0) {
     return {
       subject,
-      body: `Здравствуйте!\n\nБлагодарим за продуктивный созвон по проекту «${projectName}». Мы сверили все обсуждавшиеся вопросы с нашим текущим Техническим заданием.\n\n${inScopeBlock}\n\nВсе озвученные пожелания полностью укладываются в утвержденный объем работ. Продолжаем разработку в штатном режиме!`,
+      body: `Здравствуйте!\n\nБлагодарим за продуктивный созвон по проекту «${projectName}». Мы сверили все обсуждавшиеся вопросы с нашим текущим Техническим заданием.\n\n${inScopeBlock}\n\nВсе озвученные пожелания полностью укладываются в утвержденный объем работ. Продолжаем разработку в штатном режиме!\n\n${signature}`,
     };
   }
 
@@ -262,15 +561,27 @@ export function rebuildClientEmailDraft(
 
   const formattedCost = formatMoney(metrics.totalCost, currency);
 
+  const introBlock =
+    emailTone === 'strict_legal'
+      ? `По итогам рабочей встречи по проекту «${projectName}» юридический и проектный отдел провели сверку поступивших запросов с утвержденным Техническим заданием (ТЗ) к Договору.`
+      : `Спасибо за продуктивное обсуждение проекта «${projectName}». Мы внимательно разобрали запись встречи и резюмировали все тезисы, чтобы синхронизировать ожидания и защитить сроки запуска основного релиза.`;
+
+  const optionsBlock =
+    emailTone === 'strict_legal'
+      ? `Порядок дальнейших действий:\nВ соответствии с условиями договора для включения данных работ в производственный план требуется подписание Дополнительного соглашения №1 (Change Order, проект приложен ниже) с корректировкой срока сдачи на +${shiftDays} рабочих дн.`
+      : emailTone === 'partner_backlog'
+      ? `Партнерское предложение по дорожной карте:\nЧтобы гарантированно сохранить дату ближайшего релиза и не увеличивать бюджет текущего спринта, мы рекомендуем зафиксировать эти задачи в дорожной карте 2-го этапа (Backlog v1.1) и приступить к ним сразу после сдачи базовой версии (либо оформить Change Order со сдвигом на +${shiftDays} раб. дн., если функционал критичен к запуску).`
+      : `Как предлагаем поступить:\nВариант А — Мы фиксируем эти задачи в Дополнительном соглашении (Change Order, проект текста приложен ниже, +${shiftDays} раб. дн.) и включаем их в план работ.\nВариант Б — Чтобы не сдвигать дату ближайшего релиза и не увеличивать бюджет текущего спринта, выносим эти пункты во 2-ю очередь развития (Backlog v1.1) сразу после сдачи базовой версии.`;
+
   const body = [
     `Здравствуйте!`,
-    `Спасибо за продуктивное обсуждение проекта «${projectName}». Мы внимательно разобрали запись встречи и резюмировали все тезисы, чтобы синхронизировать ожидания и защитить сроки запуска основного релиза.`,
+    introBlock,
     inScopeBlock,
     `2. НОВЫЕ ПОЖЕЛАНИЯ И РАЗВИТИЕ ПРОДУКТА (выходят за рамки утвержденного ТЗ):\nВ ходе обсуждения прозвучали отличные идеи, которые усилят продукт, но требуют дополнительной архитектуры и не были заложены в исходную смету:\n\n${outOfScopeBlock}`,
-    `Суммарная оценка дополнительных доработок составляет ${metrics.totalHours} ч. (${formattedCost} по ставке договора).`,
-    `Как предлагаем поступить:\nВариант А — Мы фиксируем эти задачи в Дополнительном соглашении (Change Order, проект текста приложен ниже) и включаем их в план работ.\nВариант Б — Чтобы не сдвигать дату ближайшего релиза и не увеличивать бюджет текущего спринта, выносим эти пункты во 2-ю очередь развития (Backlog v1.1) сразу после сдачи базовой версии.`,
+    `Суммарная оценка дополнительных доработок составляет ${metrics.totalHours} ч. (${formattedCost} по ставке договора, ${taxText}).`,
+    optionsBlock,
     `Подскажите, какой вариант для вас комфортнее по приоритетам и бюджету?`,
-    `С уважением,\nКоманда управления проектом и правового сопровождения`,
+    signature,
   ].join('\n\n');
 
   return { subject, body };
@@ -552,7 +863,7 @@ export interface FreemiumState {
 }
 
 export const FREE_AUDIT_LIMIT = 2;
-export const FREELANCE_AUDIT_LIMIT = 20;
+export const FREELANCE_AUDIT_LIMIT = 25;
 
 export function createInitialFreemiumState(): FreemiumState {
   return {

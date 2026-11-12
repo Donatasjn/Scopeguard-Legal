@@ -122,15 +122,15 @@ export const ScopeItemsTable: React.FC<ScopeItemsTableProps> = ({
       {/* Out of Scope Register */}
       <section
         aria-label="Реестр новых хотелок вне ТЗ"
-        className="gdocs-sheet rounded-3xl p-6 sm:p-7"
+        className="glass-card rounded-3xl p-6 sm:p-7"
       >
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
           <div>
-            <h2 className="text-base sm:text-lg font-semibold text-slate-900 dark:text-white">
-              Лист 02. Выявленный Scope Creep: реестр доработок вне ТЗ
+            <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
+              Выявленный Scope Creep: реестр доработок вне ТЗ
             </h2>
             <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-              Интерактивный лист: меняйте часы и критичность — смета и Change Order пересчитываются мгновенно.
+              Интерактивный реестр: меняйте часы и критичность — смета и Change Order пересчитываются мгновенно.
             </p>
           </div>
 
@@ -141,7 +141,7 @@ export const ScopeItemsTable: React.FC<ScopeItemsTableProps> = ({
               setAddFormError(null);
               setIsAddModalOpen(true);
             }}
-            className="min-h-[42px] inline-flex items-center justify-center gap-1.5 px-5 py-2 text-xs font-semibold text-white bg-slate-900 dark:bg-indigo-600 hover:bg-indigo-600 dark:hover:bg-indigo-500 rounded-full shadow-xs transition-all whitespace-nowrap shrink-0 cursor-pointer"
+            className="min-h-[42px] inline-flex items-center justify-center gap-1.5 px-5 py-2 text-xs font-bold text-white bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 rounded-xl shadow-sm transition-all active:scale-95 whitespace-nowrap shrink-0 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>+ Добавить доработку</span>
@@ -432,12 +432,12 @@ export const ScopeItemsTable: React.FC<ScopeItemsTableProps> = ({
       {/* Confirmed In-Scope Items Section */}
       <section
         aria-label="Подтвержденные пункты в рамках ТЗ"
-        className="gdocs-sheet rounded-3xl p-6 sm:p-7"
+        className="glass-card rounded-3xl p-6 sm:p-7"
       >
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-4 border-b border-slate-100 dark:border-slate-800">
           <div>
-            <h2 className="text-base font-semibold text-slate-900 dark:text-white">
-              Лист 03. Подтверждено в рамках текущего ТЗ и базовой сметы
+            <h2 className="text-base font-bold text-slate-900 dark:text-white">
+              Подтверждено в рамках текущего ТЗ и базовой сметы
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
               Задачи, которые обсуждались на созвоне и уже входят в базовый договор.
@@ -496,11 +496,11 @@ export const ScopeItemsTable: React.FC<ScopeItemsTableProps> = ({
           aria-labelledby="add-item-modal-title"
           data-testid="add-item-modal"
           onClick={() => setIsAddModalOpen(false)}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/45 backdrop-blur-md overflow-y-auto animate-modal-backdrop"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xl overflow-y-auto animate-modal-backdrop"
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800 rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl animate-modal-content space-y-5"
+            className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl border border-slate-200/80 dark:border-slate-800 rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl animate-modal-content space-y-5"
           >
             <div className="flex items-start justify-between gap-3 pb-4 border-b border-slate-100 dark:border-slate-800">
               <div>

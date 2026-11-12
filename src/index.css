@@ -10,14 +10,15 @@
 
   body {
     font-family: var(--font-sans);
-    color: #1f1f1f;
-    background-color: #f9fbfd;
+    color: #0f172a;
+    background-color: #f8fafc;
     -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
   }
 
   .dark body {
-    color: #f1f5f9;
-    background-color: #0b0f19;
+    color: #f8fafc;
+    background-color: #070a12;
   }
 
   h1, h2, h3, h4, nav, button {
@@ -34,63 +35,84 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Google NotebookLM Radial Aura Background */
-.notebooklm-aura {
-  background-image:
-    radial-gradient(circle at 22% 18%, rgba(99, 102, 241, 0.14) 0%, rgba(99, 102, 241, 0) 48%),
-    radial-gradient(circle at 78% 14%, rgba(168, 85, 247, 0.13) 0%, rgba(168, 85, 247, 0) 46%),
-    radial-gradient(circle at 50% 42%, rgba(56, 189, 248, 0.11) 0%, rgba(56, 189, 248, 0) 52%);
+/* ============================================================================
+   FRAMER / LINEAR / APPLE KEYFRAME ANIMATIONS & ATMOSPHERE
+   ============================================================================ */
+
+@keyframes auroraShift {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.85;
+  }
+  50% {
+    transform: translate3d(24px, -18px, 0) scale(1.08);
+    opacity: 1;
+  }
 }
 
-.dark .notebooklm-aura {
-  background-image:
-    radial-gradient(circle at 22% 18%, rgba(99, 102, 241, 0.22) 0%, rgba(99, 102, 241, 0) 50%),
-    radial-gradient(circle at 78% 14%, rgba(168, 85, 247, 0.18) 0%, rgba(168, 85, 247, 0) 48%);
+@keyframes auroraShiftReverse {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.75;
+  }
+  50% {
+    transform: translate3d(-28px, 16px, 0) scale(1.1);
+    opacity: 0.95;
+  }
 }
 
-/* Google Docs Clean Sheet Surface */
-.gdocs-sheet {
-  background-color: #ffffff;
-  border: 1px solid rgba(226, 232, 240, 0.75);
-  box-shadow:
-    0 1px 3px rgba(15, 23, 42, 0.03),
-    0 8px 28px -6px rgba(15, 23, 42, 0.05);
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 18px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
 }
 
-.dark .gdocs-sheet {
-  background-color: #111827;
-  border: 1px solid rgba(51, 65, 85, 0.7);
-  box-shadow: 0 8px 30px -6px rgba(0, 0, 0, 0.45);
+@keyframes aiPulseGlow {
+  0%, 100% {
+    box-shadow:
+      0 0 0 0 rgba(79, 70, 229, 0.45),
+      0 0 28px 4px rgba(16, 185, 129, 0.28);
+  }
+  50% {
+    box-shadow:
+      0 0 0 6px rgba(79, 70, 229, 0),
+      0 0 42px 10px rgba(16, 185, 129, 0.48);
+  }
 }
 
 @keyframes modalBackdropFade {
   from {
-    opacity: 0.4;
+    opacity: 0.35;
   }
   to {
     opacity: 1;
   }
 }
 
-@keyframes modalContentPop {
+@keyframes modalContentSpring {
   from {
     opacity: 0.96;
-    transform: translateY(14px) scale(0.95);
+    transform: translate3d(0, 16px, 0) scale(0.95);
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translate3d(0, 0, 0) scale(1);
   }
 }
 
 @keyframes toastSlideIn {
   from {
     opacity: 0.95;
-    transform: translateY(14px) scale(0.97);
+    transform: translate3d(0, 14px, 0) scale(0.97);
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translate3d(0, 0, 0) scale(1);
   }
 }
 
@@ -103,30 +125,39 @@
   }
 }
 
-@keyframes tabContentFade {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
+@keyframes aiBeamFlow {
+  0%, 100% {
+    transform: translateX(-5px);
+    opacity: 0.7;
   }
-  to {
+  50% {
+    transform: translateX(5px);
     opacity: 1;
-    transform: translateY(0);
   }
 }
 
-@keyframes aiBeamPulse {
-  0%, 100% {
-    transform: translateX(-4px);
-    opacity: 0.75;
-  }
-  50% {
-    transform: translateX(4px);
-    opacity: 1;
-  }
+.animate-aurora-1 {
+  animation: auroraShift 9s ease-in-out infinite;
+}
+
+.animate-aurora-2 {
+  animation: auroraShiftReverse 11s ease-in-out infinite;
+}
+
+.animate-fade-up {
+  animation: fadeInUp 420ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-tab-fade {
+  animation: fadeInUp 320ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-ai-pulse {
+  animation: aiPulseGlow 2.2s ease-in-out infinite;
 }
 
 .animate-ai-beam {
-  animation: aiBeamPulse 2.2s ease-in-out infinite;
+  animation: aiBeamFlow 2s ease-in-out infinite;
 }
 
 .animate-modal-backdrop {
@@ -134,7 +165,7 @@
 }
 
 .animate-modal-content {
-  animation: modalContentPop 280ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: modalContentSpring 300ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .animate-toast-in {
@@ -146,15 +177,36 @@
   animation: toastProgressShrink 3600ms linear forwards;
 }
 
-.animate-tab-fade {
-  animation: tabContentFade 240ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+/* Subtle architectural grid for the #0B0F19 Hero */
+.hero-grid-pattern {
+  background-size: 48px 48px;
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+}
+
+/* Glassmorphism Workspace Card Surface */
+.glass-card {
+  background-color: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(226, 232, 240, 0.85);
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.03),
+    0 12px 32px -8px rgba(15, 23, 42, 0.06);
+}
+
+.dark .glass-card {
+  background-color: rgba(15, 23, 42, 0.82);
+  border: 1px solid rgba(51, 65, 85, 0.75);
+  box-shadow: 0 16px 40px -10px rgba(0, 0, 0, 0.55);
 }
 
 .card-hover-lift {
   transition:
-    transform 260ms cubic-bezier(0.16, 1, 0.3, 1),
-    box-shadow 260ms cubic-bezier(0.16, 1, 0.3, 1),
-    border-color 260ms cubic-bezier(0.16, 1, 0.3, 1);
+    transform 280ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 280ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 280ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .card-hover-lift:hover {

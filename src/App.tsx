@@ -1,7 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import { FolderClock, Printer } from 'lucide-react';
 import {
-  DesktopSidebar,
+  Clock,
+  FileSpreadsheet,
+  FolderClock,
+  Layers,
+  MailCheck,
+  Printer,
+  Scale,
+  ShieldCheck,
+  Sparkles,
+  TrendingUp,
+} from 'lucide-react';
+import {
   MobileBottomNav,
   TopBar,
   type ActiveSection,
@@ -44,6 +54,37 @@ const FREEMIUM_STORAGE_KEY = 'scopeguard_freemium_v1';
 const CURRENCY_STORAGE_KEY = 'scopeguard_currency_v1';
 const HISTORY_STORAGE_KEY = 'scopeguard_history_v1';
 const THEME_STORAGE_KEY = 'scopeguard_theme_v1';
+
+type WorkspaceResultsTab = 'all' | 'registry' | 'email' | 'change-order';
+
+function useAnimatedNumber(targetValue: number, durationMs = 380): number {
+  const [displayValue, setDisplayValue] = useState<number>(targetValue);
+
+  useEffect(() => {
+    let rafId = 0;
+    const startValue = displayValue;
+    const delta = targetValue - startValue;
+    if (delta === 0) return;
+
+    const startTime = performance.now();
+    const tick = (now: number) => {
+      const elapsed = now - startTime;
+      const progress = Math.min(1, elapsed / durationMs);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setDisplayValue(Math.round(startValue + delta * eased));
+      if (progress < 1) {
+        rafId = window.requestAnimationFrame(tick);
+      } else {
+        setDisplayValue(targetValue);
+      }
+    };
+
+    rafId = window.requestAnimationFrame(tick);
+    return () => window.cancelAnimationFrame(rafId);
+  }, [targetValue, durationMs]);
+
+  return displayValue;
+}
 
 function loadSavedCurrency(): CurrencyCode {
   try {
@@ -166,7 +207,10 @@ export default function App() {
   );
 
   const [isDark, setIsDark] = useState<boolean>(loadSavedTheme);
-  const [activeTab, setActiveTab] = useState<ActiveNavTab>('audit');
+  // Open immediately on the new Landing Page on first visit
+  const [activeTab, setActiveTab] = useState<ActiveNavTab>('landing');
+  const [workspaceResultsTab, setWorkspaceResultsTab] =
+    useState<WorkspaceResultsTab>('all');
   const [currency, setCurrency] = useState<CurrencyCode>(initialCurrency);
   const [selectedPresetId, setSelectedPresetId] = useState<string>(
     initialPreset.id
@@ -284,6 +328,13 @@ export default function App() {
   }, [historyEntries]);
 
   const metrics = calculateScopeMetrics(report.out_of_scope_items, hourlyRate);
+  const shiftDays =
+    metrics.totalHours > 0 ? Math.max(1, Math.ceil(metrics.totalHours / 6)) : 0;
+
+  const animatedTotalCost = useAnimatedNumber(metrics.totalCost);
+  const animatedTotalHours = useAnimatedNumber(metrics.totalHours);
+  const animatedItemCount = useAnimatedNumber(metrics.itemCount);
+  const animatedShiftDays = useAnimatedNumber(shiftDays);
 
   const syncDeliverablesWithItems = (
     nextOutItems: OutOfScopeItem[],
@@ -482,6 +533,14 @@ export default function App() {
         `Проект «${finalProjectName}»: выявлено ${validated.out_of_scope_items.length} поз. вне ТЗ.`,
         'document'
       );
+
+      // Smoothly scroll to results zone
+      window.setTimeout(() => {
+        const el = document.getElementById('results-zone');
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 80);
     } catch (err) {
       setValidationError(
         err instanceof Error
@@ -625,11 +684,15 @@ export default function App() {
   return (
     <div
       id="top"
-      className="min-h-screen flex flex-col bg-[#F9FBFD] dark:bg-slate-950 text-slate-900 dark:text-slate-100 pb-16 lg:pb-0 transition-colors"
+      className="min-h-screen flex flex-col bg-[#F8FAFC] dark:bg-slate-950 text-slate-900 dark:text-slate-100 pb-16 lg:pb-0 transition-colors"
     >
+      {/* Sleek Floating Top Bar (No bulky left sidebar!) */}
       <TopBar
         activeTab={activeTab}
-        onSelectTab={setActiveTab}
+        onSelectTab={(tab) => {
+          setActiveTab(tab);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }}
         activeSection={activeSection}
         onSelectSection={handleSelectSection}
         historyCount={historyEntries.length}
@@ -644,235 +707,305 @@ export default function App() {
         }}
       />
 
-      {/* Unified Google Workspace Shell */}
-      <div className="flex-1 flex max-w-[1580px] w-full mx-auto print:hidden">
-        <DesktopSidebar
-          activeTab={activeTab}
-          onSelectTab={setActiveTab}
-          activeSection={activeSection}
-          onSelectSection={handleSelectSection}
-          historyCount={historyEntries.length}
-          freemiumState={freemiumState}
-          onOpenPricingModal={() => {
-            setIsQuotaPaywallTriggered(false);
-            setIsPricingModalOpen(true);
-          }}
-        />
+      {/* Full-Width Main Viewport */}
+      <div className="flex-1 w-full print:hidden">
+        {/* SCREEN 0: ULTRA-MODERN FRAMER / LINEAR / APPLE LANDING PAGE */}
+        {activeTab === 'landing' && (
+          <LandingPage
+            currency={currency}
+            hourlyRate={hourlyRate}
+            freemiumState={freemiumState}
+            onStartFreeAudit={() => {
+              setActiveTab('audit');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            onOpenSampleModal={() => setIsSampleModalOpen(true)}
+            onOpenHistory={() => {
+              setActiveTab('history');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+          />
+        )}
 
-        <main className="flex-1 min-w-0 px-3 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-6">
-          {/* SCREEN 0: GOOGLE NOTEBOOKLM LANDING PAGE */}
-          {activeTab === 'landing' && (
-            <LandingPage
-              currency={currency}
+        {/* SCREEN 1: FULL-WIDTH TOP-TO-BOTTOM WORKSPACE ("КАБИНЕТ") */}
+        {activeTab === 'audit' && (
+          <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-8 animate-tab-fade">
+            {/* Workspace Hero Banner / Quick Context Header */}
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+              <div className="space-y-1">
+                <div className="inline-flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 font-semibold border border-indigo-500/20">
+                    <Sparkles className="w-3 h-3" />
+                    Рабочий кабинет ScopeGuard
+                  </span>
+                  <span>{freemiumState.agencyBrandName}</span>
+                  <span aria-hidden="true">·</span>
+                  <span>{contractNumber}</span>
+                </div>
+                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
+                  {report.project_name || 'Аудит ТЗ и расшифровки переговоров'}
+                </h1>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsSampleModalOpen(true)}
+                  className="min-h-[40px] inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200/90 dark:border-slate-800 rounded-xl shadow-2xs transition-all active:scale-95 cursor-pointer"
+                >
+                  <span>Пример отчета</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('history')}
+                  className="min-h-[40px] inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200/90 dark:border-slate-800 rounded-xl shadow-2xs transition-all active:scale-95 cursor-pointer"
+                >
+                  <FolderClock className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                  <span>Архив ({historyEntries.length})</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsPrintModalOpen(true);
+                    addToast(
+                      'Официальный бланк Change Order сформирован',
+                      'Готов к печати, сохранению в PDF или выгрузке в Word.',
+                      'document'
+                    );
+                  }}
+                  className="min-h-[40px] inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 rounded-xl shadow-sm transition-all active:scale-95 cursor-pointer"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>Бланк PDF / Печать</span>
+                </button>
+              </div>
+            </div>
+
+            {/* ZONE 1: SIDE-BY-SIDE DRAG & DROP UPLOAD ZONE */}
+            <SourceInputPanel
+              selectedPresetId={selectedPresetId}
+              onSelectPreset={(preset) => {
+                handleSelectPreset(preset);
+                addToast(
+                  `Загружен шаблон «${preset.label}»`,
+                  'Исходное ТЗ, стенограмма и реестр правок синхронизированы.',
+                  'info'
+                );
+              }}
+              projectName={projectName}
+              onChangeProjectName={(val) => {
+                setProjectName(val);
+                setReport((prev) => ({
+                  ...prev,
+                  project_name: val.trim() || prev.project_name,
+                }));
+              }}
+              auditDate={auditDate}
+              onChangeAuditDate={(val) => {
+                setAuditDate(val);
+                setReport((prev) => ({ ...prev, audit_date: val }));
+              }}
               hourlyRate={hourlyRate}
-              freemiumState={freemiumState}
-              onStartFreeAudit={() => {
-                setActiveTab('audit');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
+              onChangeHourlyRate={(val) => {
+                const safe = Number.isFinite(val) && val > 0 ? val : 50;
+                setHourlyRate(safe);
+                syncDeliverablesWithItems(
+                  report.out_of_scope_items,
+                  report.in_scope_items,
+                  projectName,
+                  auditDate,
+                  safe,
+                  currency
+                );
               }}
-              onOpenSampleModal={() => setIsSampleModalOpen(true)}
-              onOpenHistory={() => {
-                setActiveTab('history');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }}
+              currency={currency}
+              specText={specText}
+              onChangeSpecText={setSpecText}
+              specFile={specFile}
+              onChangeSpecFile={setSpecFile}
+              transcriptText={transcriptText}
+              onChangeTranscriptText={setTranscriptText}
+              transcriptFile={transcriptFile}
+              onChangeTranscriptFile={setTranscriptFile}
+              onSubmitAudit={runScopeAudit}
+              onClearInputs={handleClearInputs}
+              isAnalyzing={isAnalyzing}
+              analysisStepText={analysisStepText}
+              analysisProgress={analysisProgress}
+              validationError={validationError}
+              onSetValidationError={setValidationError}
             />
-          )}
 
-          {/* SCREEN 1: GOOGLE DOCS STYLE AUDIT WORKSPACE */}
-          {activeTab === 'audit' && (
-            <>
-              {/* Google Docs Document Header & Pill Toolbar Sheet */}
-              <section
+            {/* ZONE 2: RESULTS DASHBOARD — ANIMATED KPI CARDS + UNIFIED TABS */}
+            <section
+              id="results-zone"
+              aria-label="Сводка защиты бюджета и результаты аудита"
+              className="space-y-6 pt-2"
+            >
+              {/* 4 Large Animated KPI Cards */}
+              <div
                 id="audit"
-                aria-label="Сводка защиты бюджета проекта"
-                className="gdocs-sheet rounded-3xl p-5 sm:p-7 animate-tab-fade space-y-5"
+                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
               >
-                {/* Top Document Title Row + Pill Actions */}
-                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                  <div className="space-y-1.5">
-                    <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-                      <span className="px-2.5 py-0.5 rounded-full bg-[#EDF2FA] dark:bg-slate-800 text-indigo-700 dark:text-indigo-300 font-semibold">
-                        Документ Change Order
-                      </span>
-                      <span>{freemiumState.agencyBrandName}</span>
-                      <span aria-hidden="true">·</span>
-                      <span className="font-mono tabular-nums">
-                        От {report.audit_date}
-                      </span>
-                      <span aria-hidden="true">·</span>
-                      <span>{contractNumber}</span>
-                    </div>
-                    <h1 className="text-xl sm:text-2xl lg:text-3xl font-semibold tracking-tight text-slate-900 dark:text-white text-balance">
-                      {report.project_name || 'Аудит ТЗ и расшифровки переговоров'}
-                    </h1>
-                  </div>
-
-                  {/* Google Docs Compact Pill Toolbar */}
-                  <div className="flex flex-wrap sm:flex-nowrap items-center gap-1.5 bg-[#EDF2FA]/90 dark:bg-slate-800/90 p-1.5 rounded-2xl sm:rounded-full self-start lg:self-auto shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => setIsSampleModalOpen(true)}
-                      className="min-h-[36px] inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-slate-700 rounded-full transition-colors whitespace-nowrap shrink-0 cursor-pointer"
-                    >
-                      <span>Пример отчета</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab('history')}
-                      className="min-h-[36px] inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-slate-700 rounded-full transition-colors whitespace-nowrap shrink-0 cursor-pointer"
-                    >
-                      <FolderClock className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-                      <span>Библиотека ({historyEntries.length})</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsPrintModalOpen(true);
-                        addToast(
-                          'Официальный бланк Change Order сформирован',
-                          'Готов к печати, сохранению в PDF или выгрузке в Word.',
-                          'document'
-                        );
-                      }}
-                      className="min-h-[36px] inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold text-white bg-slate-900 dark:bg-indigo-600 hover:bg-indigo-600 dark:hover:bg-indigo-500 rounded-full shadow-xs transition-all whitespace-nowrap shrink-0 cursor-pointer"
-                    >
-                      <Printer className="w-3.5 h-3.5" />
-                      <span>Экспорт PDF / Печать</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* 4 Soft Pastel Metric Pills inside the Google Docs Header */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 pt-2">
-                  <div className="card-hover-lift p-4 rounded-2xl bg-[#F8FAFD] dark:bg-slate-800/50">
-                    <div className="text-xs text-slate-500 dark:text-slate-400">
-                      Выявлено новых хотелок
-                    </div>
-                    <div
-                      data-testid="metric-item-count"
-                      className="text-xl sm:text-2xl font-bold font-mono tabular-nums text-slate-900 dark:text-white mt-1"
-                    >
-                      {metrics.itemCount} поз.
-                    </div>
-                    <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 font-mono tabular-nums">
-                      <span>Крит: {metrics.criticalCount}</span>
-                      <span className="mx-1">·</span>
-                      <span>Сред: {metrics.mediumCount}</span>
-                      <span className="mx-1">·</span>
-                      <span>Низ: {metrics.lowCount}</span>
-                    </div>
-                  </div>
-
-                  <div className="card-hover-lift p-4 rounded-2xl bg-[#F8FAFD] dark:bg-slate-800/50">
-                    <div className="text-xs text-slate-500 dark:text-slate-400">
-                      Объем сверх сметы
-                    </div>
-                    <div
-                      data-testid="metric-total-hours"
-                      className="text-xl sm:text-2xl font-bold font-mono tabular-nums text-slate-900 dark:text-white mt-1"
-                    >
-                      {metrics.totalHours} нормо-ч
-                    </div>
-                    <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
-                      Калибровка 1–40 ч на задачу
-                    </div>
-                  </div>
-
-                  <div className="card-hover-lift p-4 rounded-2xl bg-[#EEF2FF]/70 dark:bg-indigo-950/30">
-                    <div className="text-xs text-indigo-700 dark:text-indigo-300 font-medium">
-                      Защищенный бюджет (Change Order)
-                    </div>
-                    <div
-                      data-testid="metric-total-cost"
-                      className="text-xl sm:text-2xl font-bold font-mono tabular-nums text-indigo-600 dark:text-indigo-400 mt-1"
-                    >
-                      {formatMoney(metrics.totalCost, currency)}
-                    </div>
-                    <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 font-mono tabular-nums">
-                      Ставка {formatMoney(hourlyRate, currency)}/ч
-                    </div>
-                  </div>
-
-                  <div className="card-hover-lift p-4 rounded-2xl bg-[#F8FAFD] dark:bg-slate-800/50">
-                    <div className="text-xs text-slate-500 dark:text-slate-400">
-                      Правовой сдвиг графика
-                    </div>
-                    <div className="text-xl sm:text-2xl font-bold font-mono tabular-nums text-slate-900 dark:text-white mt-1">
-                      +
-                      {metrics.totalHours > 0
-                        ? Math.max(1, Math.ceil(metrics.totalHours / 6))
-                        : 0}{' '}
-                      раб. дн.
-                    </div>
-                    <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
-                      Соразмерное продление этапа
-                    </div>
-                  </div>
-                </div>
-              </section>
-
-              {/* TWO-COLUMN DESKTOP WORKSPACE: Left = Upload Form, Right = Live Scope Creep Register */}
-              <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
-                <div className="xl:col-span-5">
-                  <SourceInputPanel
-                    selectedPresetId={selectedPresetId}
-                    onSelectPreset={(preset) => {
-                      handleSelectPreset(preset);
-                      addToast(
-                        `Загружен шаблон «${preset.label}»`,
-                        'Исходное ТЗ, стенограмма и реестр правок синхронизированы.',
-                        'info'
-                      );
-                    }}
-                    projectName={projectName}
-                    onChangeProjectName={(val) => {
-                      setProjectName(val);
-                      setReport((prev) => ({
-                        ...prev,
-                        project_name: val.trim() || prev.project_name,
-                      }));
-                    }}
-                    auditDate={auditDate}
-                    onChangeAuditDate={(val) => {
-                      setAuditDate(val);
-                      setReport((prev) => ({ ...prev, audit_date: val }));
-                    }}
-                    hourlyRate={hourlyRate}
-                    onChangeHourlyRate={(val) => {
-                      const safe =
-                        Number.isFinite(val) && val > 0 ? val : 50;
-                      setHourlyRate(safe);
-                      syncDeliverablesWithItems(
-                        report.out_of_scope_items,
-                        report.in_scope_items,
-                        projectName,
-                        auditDate,
-                        safe,
-                        currency
-                      );
-                    }}
-                    currency={currency}
-                    specText={specText}
-                    onChangeSpecText={setSpecText}
-                    specFile={specFile}
-                    onChangeSpecFile={setSpecFile}
-                    transcriptText={transcriptText}
-                    onChangeTranscriptText={setTranscriptText}
-                    transcriptFile={transcriptFile}
-                    onChangeTranscriptFile={setTranscriptFile}
-                    onSubmitAudit={runScopeAudit}
-                    onClearInputs={handleClearInputs}
-                    isAnalyzing={isAnalyzing}
-                    analysisStepText={analysisStepText}
-                    analysisProgress={analysisProgress}
-                    validationError={validationError}
-                    onSetValidationError={setValidationError}
+                {/* KPI 1: Protected Budget (Emerald/Indigo Highlight) */}
+                <div className="glass-card card-hover-lift rounded-3xl p-5 sm:p-6 relative overflow-hidden border-emerald-500/30 dark:border-emerald-500/30">
+                  <div
+                    aria-hidden="true"
+                    className="pointer-events-none absolute -right-8 -top-8 w-28 h-28 rounded-full bg-emerald-500/10 blur-2xl"
                   />
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+                      Защищенный бюджет
+                    </span>
+                    <span className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                      <ShieldCheck className="w-4 h-4" />
+                    </span>
+                  </div>
+                  <div
+                    data-testid="metric-total-cost"
+                    className="text-2xl sm:text-3xl font-extrabold font-mono tabular-nums text-emerald-600 dark:text-emerald-400 mt-2 tracking-tight"
+                  >
+                    {formatMoney(animatedTotalCost, currency)}
+                  </div>
+                  <div className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 font-mono tabular-nums">
+                    Ставка: {formatMoney(hourlyRate, currency)}/ч · Change Order
+                  </div>
                 </div>
 
-                <div className="xl:col-span-7">
+                {/* KPI 2: Hours Out of Scope */}
+                <div className="glass-card card-hover-lift rounded-3xl p-5 sm:p-6">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                      Часы сверх ТЗ
+                    </span>
+                    <span className="w-8 h-8 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                      <Clock className="w-4 h-4" />
+                    </span>
+                  </div>
+                  <div
+                    data-testid="metric-total-hours"
+                    className="text-2xl sm:text-3xl font-extrabold font-mono tabular-nums text-slate-900 dark:text-white mt-2 tracking-tight"
+                  >
+                    +{animatedTotalHours} нормо-ч
+                  </div>
+                  <div className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
+                    Калибровка 1–40 ч на каждую задачу
+                  </div>
+                </div>
+
+                {/* KPI 3: Legal Deadline Shift */}
+                <div className="glass-card card-hover-lift rounded-3xl p-5 sm:p-6">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                      Сдвиг срока сдачи
+                    </span>
+                    <span className="w-8 h-8 rounded-xl bg-violet-500/10 text-violet-600 dark:text-violet-400 flex items-center justify-center">
+                      <TrendingUp className="w-4 h-4" />
+                    </span>
+                  </div>
+                  <div className="text-2xl sm:text-3xl font-extrabold font-mono tabular-nums text-slate-900 dark:text-white mt-2 tracking-tight">
+                    +{animatedShiftDays} раб. дн.
+                  </div>
+                  <div className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
+                    Правовое продление дедлайна этапа
+                  </div>
+                </div>
+
+                {/* KPI 4: Out-of-Scope Findings Count */}
+                <div className="glass-card card-hover-lift rounded-3xl p-5 sm:p-6">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                      Выявлено хотелок вне ТЗ
+                    </span>
+                    <span className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+                      <FileSpreadsheet className="w-4 h-4" />
+                    </span>
+                  </div>
+                  <div
+                    data-testid="metric-item-count"
+                    className="text-2xl sm:text-3xl font-extrabold font-mono tabular-nums text-slate-900 dark:text-white mt-2 tracking-tight"
+                  >
+                    {animatedItemCount} поз.
+                  </div>
+                  <div className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 font-mono tabular-nums">
+                    Крит: {metrics.criticalCount} · Сред: {metrics.mediumCount}{' '}
+                    · Низ: {metrics.lowCount}
+                  </div>
+                </div>
+              </div>
+
+              {/* Unified Results Navigation Bar: «Все разделы / Реестр / Письмо / Доп. соглашение / PDF» */}
+              <div className="glass-card rounded-2xl p-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div
+                  role="tablist"
+                  aria-label="Навигация по результатам аудита"
+                  className="flex flex-wrap items-center gap-1 p-1 bg-slate-100/90 dark:bg-slate-800/80 rounded-xl"
+                >
+                  {(
+                    [
+                      { id: 'all', label: 'Все разделы', icon: Layers },
+                      {
+                        id: 'registry',
+                        label: `Реестр (${report.out_of_scope_items.length})`,
+                        icon: FileSpreadsheet,
+                      },
+                      {
+                        id: 'email',
+                        label: 'Письмо клиенту',
+                        icon: MailCheck,
+                      },
+                      {
+                        id: 'change-order',
+                        label: 'Доп. соглашение',
+                        icon: Scale,
+                      },
+                    ] as const
+                  ).map((tab) => {
+                    const Icon = tab.icon;
+                    const active = workspaceResultsTab === tab.id;
+                    return (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        role="tab"
+                        aria-selected={active}
+                        onClick={() => setWorkspaceResultsTab(tab.id)}
+                        className={`min-h-[38px] inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold rounded-lg transition-all active:scale-95 cursor-pointer whitespace-nowrap ${
+                          active
+                            ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs'
+                            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                        }`}
+                      >
+                        <Icon className="w-3.5 h-3.5" />
+                        <span>{tab.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsPrintModalOpen(true);
+                    addToast(
+                      'Официальный бланк Change Order открыт',
+                      'Доступна печать в PDF или скачивание в Word (.doc).',
+                      'document'
+                    );
+                  }}
+                  className="min-h-[38px] inline-flex items-center justify-center gap-1.5 px-4 py-1.5 text-xs font-bold text-white bg-slate-900 dark:bg-indigo-600 hover:bg-indigo-600 dark:hover:bg-indigo-500 rounded-xl shadow-xs transition-all active:scale-95 cursor-pointer whitespace-nowrap"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>PDF / Печать бланка</span>
+                </button>
+              </div>
+
+              {/* Active Results View */}
+              <div key={workspaceResultsTab} className="space-y-6 animate-tab-fade">
+                {(workspaceResultsTab === 'all' ||
+                  workspaceResultsTab === 'registry') && (
                   <ScopeItemsTable
                     outOfScopeItems={report.out_of_scope_items}
                     inScopeItems={report.in_scope_items}
@@ -885,56 +1018,73 @@ export default function App() {
                     onAddInScopeItem={handleAddInScopeItem}
                     onRemoveInScopeItem={handleRemoveInScopeItem}
                   />
-                </div>
+                )}
+
+                {(workspaceResultsTab === 'all' ||
+                  workspaceResultsTab === 'email' ||
+                  workspaceResultsTab === 'change-order') && (
+                  <DeliverablesView
+                    report={report}
+                    hourlyRate={hourlyRate}
+                    currency={currency}
+                    initialTab={
+                      workspaceResultsTab === 'email'
+                        ? 'email'
+                        : workspaceResultsTab === 'change-order'
+                        ? 'change-order'
+                        : 'all'
+                    }
+                    onUpdateEmailSubject={(subject) =>
+                      setReport((prev) => ({
+                        ...prev,
+                        client_email_draft: {
+                          ...prev.client_email_draft,
+                          subject,
+                        },
+                      }))
+                    }
+                    onUpdateEmailBody={(body) =>
+                      setReport((prev) => ({
+                        ...prev,
+                        client_email_draft: {
+                          ...prev.client_email_draft,
+                          body,
+                        },
+                      }))
+                    }
+                    onUpdateChangeOrder={(summary) =>
+                      setReport((prev) => ({
+                        ...prev,
+                        change_order_summary: summary,
+                      }))
+                    }
+                    onRegenerateTemplates={() =>
+                      syncDeliverablesWithItems(
+                        report.out_of_scope_items,
+                        report.in_scope_items
+                      )
+                    }
+                    onOpenPrintModal={() => {
+                      setIsPrintModalOpen(true);
+                      addToast(
+                        'Официальный бланк Change Order открыт',
+                        'Вы можете распечатать документ в PDF или скачать в формате Word.',
+                        'document'
+                      );
+                    }}
+                    onNotifyToast={(title, desc) =>
+                      addToast(title, desc, 'success')
+                    }
+                  />
+                )}
               </div>
+            </section>
+          </main>
+        )}
 
-              {/* Deliverables: Diplomatic Client Email, Change Order & JSON Schema */}
-              <DeliverablesView
-                report={report}
-                hourlyRate={hourlyRate}
-                currency={currency}
-                onUpdateEmailSubject={(subject) =>
-                  setReport((prev) => ({
-                    ...prev,
-                    client_email_draft: {
-                      ...prev.client_email_draft,
-                      subject,
-                    },
-                  }))
-                }
-                onUpdateEmailBody={(body) =>
-                  setReport((prev) => ({
-                    ...prev,
-                    client_email_draft: { ...prev.client_email_draft, body },
-                  }))
-                }
-                onUpdateChangeOrder={(summary) =>
-                  setReport((prev) => ({
-                    ...prev,
-                    change_order_summary: summary,
-                  }))
-                }
-                onRegenerateTemplates={() =>
-                  syncDeliverablesWithItems(
-                    report.out_of_scope_items,
-                    report.in_scope_items
-                  )
-                }
-                onOpenPrintModal={() => {
-                  setIsPrintModalOpen(true);
-                  addToast(
-                    'Официальный бланк Change Order открыт',
-                    'Вы можете распечатать документ в PDF или скачать в формате Word.',
-                    'document'
-                  );
-                }}
-                onNotifyToast={(title, desc) => addToast(title, desc, 'success')}
-              />
-            </>
-          )}
-
-          {/* SCREEN 2: LIBRARY OF AUDITS / HISTORY */}
-          {activeTab === 'history' && (
+        {/* SCREEN 2: LIBRARY OF AUDITS / HISTORY ("АРХИВ") */}
+        {activeTab === 'history' && (
+          <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 animate-tab-fade">
             <AuditHistoryView
               entries={historyEntries}
               activeEntryId={activeHistoryId}
@@ -955,10 +1105,12 @@ export default function App() {
                 setActiveTab('audit');
               }}
             />
-          )}
+          </main>
+        )}
 
-          {/* SCREEN 3: TARIFFS & LIMITS HUB */}
-          {activeTab === 'pricing' && (
+        {/* SCREEN 3: TARIFFS & LIMITS HUB */}
+        {activeTab === 'pricing' && (
+          <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 animate-tab-fade">
             <PricingModal
               isOpen={true}
               inlineMode={true}
@@ -972,12 +1124,12 @@ export default function App() {
               onCompleteUpgrade={handleCompleteUpgrade}
               onResetDemoQuota={handleResetDemoQuota}
             />
-          )}
-        </main>
+          </main>
+        )}
       </div>
 
       <footer className="bg-white dark:bg-slate-900 border-t border-slate-200/80 dark:border-slate-800 py-5 px-6 mt-8 print:hidden">
-        <div className="max-w-[1600px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500 dark:text-slate-400">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500 dark:text-slate-400">
           <span>
             ScopeGuard Legal — Система защиты ИТ-исполнителей от несогласованного расширения объема работ
           </span>
@@ -990,7 +1142,10 @@ export default function App() {
       {/* Mobile Bottom Navigation Bar */}
       <MobileBottomNav
         activeTab={activeTab}
-        onSelectTab={setActiveTab}
+        onSelectTab={(tab) => {
+          setActiveTab(tab);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }}
         historyCount={historyEntries.length}
       />
 

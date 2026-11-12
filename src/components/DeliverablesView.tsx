@@ -20,6 +20,7 @@ interface DeliverablesViewProps {
   report: ScopeAuditReport;
   hourlyRate: number;
   currency: CurrencyCode;
+  initialTab?: 'all' | 'email' | 'change-order' | 'json';
   onUpdateEmailSubject: (subject: string) => void;
   onUpdateEmailBody: (body: string) => void;
   onUpdateChangeOrder: (summary: string) => void;
@@ -32,6 +33,7 @@ export const DeliverablesView: React.FC<DeliverablesViewProps> = ({
   report,
   hourlyRate,
   currency,
+  initialTab = 'all',
   onUpdateEmailSubject,
   onUpdateEmailBody,
   onUpdateChangeOrder,
@@ -42,7 +44,7 @@ export const DeliverablesView: React.FC<DeliverablesViewProps> = ({
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [activeDeliverableTab, setActiveDeliverableTab] = useState<
     'all' | 'email' | 'change-order' | 'json'
-  >('all');
+  >(initialTab);
 
   const handleCopy = async (key: string, text: string, toastTitle: string) => {
     try {

@@ -5,8 +5,8 @@ import {
   FileText,
   FolderOpen,
   MessageSquareWarning,
-  Play,
   RotateCcw,
+  Sparkles,
   Trash2,
   UploadCloud,
 } from 'lucide-react';
@@ -131,35 +131,24 @@ export const SourceInputPanel: React.FC<SourceInputPanelProps> = ({
   return (
     <section
       aria-label="Исходные документы для сверки"
-      className="gdocs-sheet rounded-3xl p-6 sm:p-7"
+      className="glass-card rounded-3xl p-6 sm:p-8 animate-fade-up"
     >
-      <div className="flex flex-col gap-3 pb-4 border-b border-slate-100 dark:border-slate-800">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h2 className="text-base sm:text-lg font-semibold text-slate-900 dark:text-white">
-              Лист 01. Исходное ТЗ и запись встречи
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-              Прикрепите файлы или вставьте текст для автоматического поиска Scope Creep.
-            </p>
+      {/* Top Header + Quick Demo Template Chips */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-5 border-b border-slate-200/80 dark:border-slate-800">
+        <div>
+          <div className="inline-flex items-center gap-1.5 text-xs font-mono uppercase tracking-wider text-indigo-600 dark:text-indigo-400 font-semibold">
+            <span>Шаг 1 · Загрузка материалов</span>
           </div>
-          <button
-            type="button"
-            onClick={onClearInputs}
-            data-testid="clear-inputs-btn"
-            className="min-h-[38px] px-3.5 py-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-[#EDF2FA] dark:bg-slate-800 hover:bg-[#D3E3FD] rounded-full transition-colors whitespace-nowrap shrink-0 flex items-center gap-1.5 cursor-pointer"
-            title="Очистить поля и прикрепленные файлы"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            <span>Очистить</span>
-          </button>
+          <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white mt-0.5">
+            Исходное ТЗ и запись встречи с заказчиком
+          </h2>
         </div>
 
-        {/* Demo Cases Pill Bar */}
-        <div className="flex flex-wrap items-center gap-1.5 pt-1">
-          <span className="inline-flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 mr-1">
-            <FolderOpen className="w-3.5 h-3.5" />
-            <span>Примеры:</span>
+        {/* Demo Template Chips + Clear Button */}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="inline-flex items-center gap-1 text-xs font-medium text-slate-500 dark:text-slate-400 mr-1">
+            <FolderOpen className="w-3.5 h-3.5 text-indigo-500" />
+            <span>Демо-шаблоны:</span>
           </span>
           {AUDIT_PRESETS.map((preset) => {
             const active =
@@ -169,26 +158,37 @@ export const SourceInputPanel: React.FC<SourceInputPanelProps> = ({
                 key={preset.id}
                 type="button"
                 onClick={() => onSelectPreset(preset)}
-                className={`min-h-[34px] px-3.5 py-1 text-xs font-semibold rounded-full transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+                className={`min-h-[34px] px-3.5 py-1.5 text-xs font-semibold rounded-xl border transition-all active:scale-95 whitespace-nowrap cursor-pointer ${
                   active
-                    ? 'bg-[#C2E7FF] text-[#001D35] dark:bg-indigo-600 dark:text-white shadow-2xs'
-                    : 'bg-[#F8FAFD] dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-[#EDF2FA] dark:hover:bg-slate-700'
+                    ? 'bg-slate-900 text-white border-slate-900 dark:bg-indigo-600 dark:border-indigo-500 shadow-xs'
+                    : 'bg-white/90 dark:bg-slate-800/90 text-slate-700 dark:text-slate-300 border-slate-200/80 dark:border-slate-700 hover:border-indigo-400'
                 }`}
               >
                 {preset.label}
               </button>
             );
           })}
+
+          <button
+            type="button"
+            onClick={onClearInputs}
+            data-testid="clear-inputs-btn"
+            className="min-h-[34px] px-3 py-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-rose-600 dark:hover:text-rose-400 bg-slate-100/90 dark:bg-slate-800 rounded-xl transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer"
+            title="Очистить поля и прикрепленные файлы"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span>Сбросить</span>
+          </button>
         </div>
       </div>
 
-      <form onSubmit={onSubmitAudit} className="mt-5 space-y-5" noValidate>
-        {/* Metadata Parameters Row */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 xl:grid-cols-1 gap-3.5">
+      <form onSubmit={onSubmitAudit} className="mt-6 space-y-6" noValidate>
+        {/* Sleek 3-Column Project Metadata Bar */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 rounded-2xl bg-slate-50/90 dark:bg-slate-900/60 border border-slate-200/70 dark:border-slate-800">
           <div>
             <label
               htmlFor="input-project-name"
-              className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1"
+              className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5"
             >
               Наименование проекта / Договор
             </label>
@@ -198,58 +198,58 @@ export const SourceInputPanel: React.FC<SourceInputPanelProps> = ({
               value={projectName}
               onChange={(e) => onChangeProjectName(e.target.value)}
               placeholder="Например: B2B-портал АгроСнаб"
-              className="w-full min-h-[44px] px-4 py-2 text-sm bg-[#F8FAFD] dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-800 focus:border-indigo-500 focus:outline-none transition-colors"
+              className="w-full min-h-[42px] px-3.5 py-2 text-sm bg-white dark:bg-slate-800 border border-slate-200/90 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:border-indigo-500 focus:outline-none transition-colors"
             />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:col-span-2 xl:col-span-1">
-            <div>
-              <label
-                htmlFor="input-audit-date"
-                className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1"
-              >
-                Дата проведения аудита
-              </label>
-              <input
-                id="input-audit-date"
-                type="date"
-                value={auditDate}
-                onChange={(e) => onChangeAuditDate(e.target.value)}
-                className="w-full min-h-[44px] px-4 py-2 text-sm font-mono tabular-nums bg-[#F8FAFD] dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-800 focus:border-indigo-500 focus:outline-none transition-colors"
-              />
-            </div>
+          <div>
+            <label
+              htmlFor="input-hourly-rate"
+              className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5"
+            >
+              Ставка часа ({currencyCfg.symbol}/ч · {currencyCfg.code})
+            </label>
+            <input
+              id="input-hourly-rate"
+              type="number"
+              min={1}
+              max={500000}
+              step={currency === 'USD' || currency === 'EUR' ? 5 : 100}
+              value={hourlyRate}
+              onChange={(e) => onChangeHourlyRate(Number(e.target.value))}
+              className="w-full min-h-[42px] px-3.5 py-2 text-sm font-mono tabular-nums font-bold bg-white dark:bg-slate-800 border border-slate-200/90 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:border-indigo-500 focus:outline-none transition-colors"
+            />
+          </div>
 
-            <div>
-              <label
-                htmlFor="input-hourly-rate"
-                className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1"
-              >
-                Ставка часа ({currencyCfg.symbol}/ч · {currencyCfg.code})
-              </label>
-              <input
-                id="input-hourly-rate"
-                type="number"
-                min={1}
-                max={500000}
-                step={currency === 'USD' || currency === 'EUR' ? 5 : 100}
-                value={hourlyRate}
-                onChange={(e) => onChangeHourlyRate(Number(e.target.value))}
-                className="w-full min-h-[44px] px-4 py-2 text-sm font-mono tabular-nums bg-[#F8FAFD] dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-800 focus:border-indigo-500 focus:outline-none transition-colors"
-              />
-            </div>
+          <div>
+            <label
+              htmlFor="input-audit-date"
+              className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5"
+            >
+              Дата проведения аудита
+            </label>
+            <input
+              id="input-audit-date"
+              type="date"
+              value={auditDate}
+              onChange={(e) => onChangeAuditDate(e.target.value)}
+              className="w-full min-h-[42px] px-3.5 py-2 text-sm font-mono tabular-nums bg-white dark:bg-slate-800 border border-slate-200/90 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:border-indigo-500 focus:outline-none transition-colors"
+            />
           </div>
         </div>
 
-        {/* Document Dropzones & Textareas */}
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-1 gap-5">
-          {/* Field 1: Initial Specification (PDF, DOCX, TXT or manual textarea) */}
-          <div className="flex flex-col space-y-2">
+        {/* Side-by-Side Drag-and-Drop Zones with Dashed Highlight on Hover */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Field 1: Initial Specification */}
+          <div className="flex flex-col space-y-2.5">
             <div className="flex items-center justify-between">
               <label
                 htmlFor="textarea-spec"
-                className="flex items-center gap-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200"
+                className="flex items-center gap-2 text-xs font-bold text-slate-800 dark:text-slate-200"
               >
-                <FileText className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                <span className="w-5 h-5 rounded-md bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                  <FileText className="w-3.5 h-3.5" />
+                </span>
                 <span>1. Исходные требования (ТЗ, договор, бриф)</span>
               </label>
               <span className="text-xs text-slate-500 dark:text-slate-400 font-mono tabular-nums">
@@ -259,7 +259,6 @@ export const SourceInputPanel: React.FC<SourceInputPanelProps> = ({
               </span>
             </div>
 
-            {/* Mobile-Friendly Touch Dropzone for Field 1 */}
             <div
               data-testid="dropzone-spec"
               onDragOver={(e) => {
@@ -276,12 +275,12 @@ export const SourceInputPanel: React.FC<SourceInputPanelProps> = ({
               onClick={() => {
                 if (!specFile) specFileInputRef.current?.click();
               }}
-              className={`min-h-[60px] rounded-xl border border-dashed p-3.5 transition-colors ${
+              className={`group rounded-2xl border-2 border-dashed p-4 transition-all duration-200 ${
                 specFile
-                  ? 'border-emerald-500/60 bg-emerald-50/50 dark:bg-emerald-950/20'
+                  ? 'border-emerald-500/70 bg-emerald-50/50 dark:bg-emerald-950/25'
                   : isDraggingSpec
-                  ? 'border-indigo-600 bg-indigo-50/60 dark:bg-indigo-950/30 cursor-pointer'
-                  : 'border-slate-300 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-800/40 hover:border-indigo-500 cursor-pointer'
+                  ? 'border-indigo-500 bg-indigo-50/70 dark:bg-indigo-950/40 scale-[1.01] cursor-pointer'
+                  : 'border-slate-300/90 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-800/40 hover:border-indigo-500 hover:bg-indigo-50/30 dark:hover:bg-indigo-950/20 cursor-pointer'
               }`}
             >
               <input
@@ -298,17 +297,17 @@ export const SourceInputPanel: React.FC<SourceInputPanelProps> = ({
 
               {specFile ? (
                 <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <FileCheck2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  <div className="flex items-center gap-3 min-w-0">
+                    <FileCheck2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
                     <div className="min-w-0">
                       <div
                         data-testid="spec-file-name"
-                        className="text-xs font-semibold text-slate-900 dark:text-white truncate"
+                        className="text-xs font-bold text-slate-900 dark:text-white truncate"
                       >
                         {specFile.name}
                       </div>
                       <div className="text-[11px] text-slate-600 dark:text-slate-400 font-mono tabular-nums">
-                        {formatFileSize(specFile.size)} · Готов к проверке
+                        {formatFileSize(specFile.size)} · Готов к ИИ-сверке
                       </div>
                     </div>
                   </div>
@@ -319,7 +318,7 @@ export const SourceInputPanel: React.FC<SourceInputPanelProps> = ({
                       e.stopPropagation();
                       onChangeSpecFile(null);
                     }}
-                    className="min-h-[40px] inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-red-700 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-950/40 rounded-lg transition-colors cursor-pointer shrink-0"
+                    className="min-h-[36px] inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-rose-700 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-950/40 rounded-xl transition-colors cursor-pointer shrink-0"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                     <span>Удалить</span>
@@ -327,19 +326,21 @@ export const SourceInputPanel: React.FC<SourceInputPanelProps> = ({
                 </div>
               ) : (
                 <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2.5">
-                    <UploadCloud className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center group-hover:scale-105 transition-transform">
+                      <UploadCloud className="w-4 h-4" />
+                    </div>
                     <div>
-                      <div className="text-xs font-semibold text-slate-800 dark:text-slate-200">
-                        Загрузить файл ТЗ (PDF, DOCX, TXT)
+                      <div className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                        Перетащите файл ТЗ (PDF, DOCX, TXT)
                       </div>
-                      <div className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
-                        Нажмите для выбора с телефона/ПК или перетащите
+                      <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                        Или нажмите для выбора документа с устройства
                       </div>
                     </div>
                   </div>
-                  <span className="min-h-[36px] inline-flex items-center px-3 py-1 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg shrink-0">
-                    Файл
+                  <span className="px-3 py-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shrink-0">
+                    Выбрать файл
                   </span>
                 </div>
               )}
@@ -347,23 +348,25 @@ export const SourceInputPanel: React.FC<SourceInputPanelProps> = ({
 
             <textarea
               id="textarea-spec"
-              rows={6}
+              rows={5}
               value={specText}
               onChange={(e) => onChangeSpecText(e.target.value)}
               placeholder="Или вставьте зафиксированные пункты Технического задания / условия договора вручную..."
-              className="w-full p-3.5 text-xs leading-relaxed font-mono bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-200 focus:bg-white dark:focus:bg-slate-800 focus:border-indigo-500 focus:outline-none transition-colors resize-y"
+              className="w-full p-3.5 text-xs leading-relaxed font-mono bg-white/90 dark:bg-slate-900/80 border border-slate-200/90 dark:border-slate-700 rounded-2xl text-slate-800 dark:text-slate-200 focus:border-indigo-500 focus:outline-none transition-colors resize-y"
             />
           </div>
 
-          {/* Field 2: Meeting Materials (Audio MP3/WAV/M4A, Video MP4/WEBM, or Transcript Text) */}
-          <div className="flex flex-col space-y-2">
+          {/* Field 2: Meeting Materials */}
+          <div className="flex flex-col space-y-2.5">
             <div className="flex items-center justify-between">
               <label
                 htmlFor="textarea-transcript"
-                className="flex items-center gap-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200"
+                className="flex items-center gap-2 text-xs font-bold text-slate-800 dark:text-slate-200"
               >
-                <MessageSquareWarning className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-                <span>2. Материалы встречи (аудио/видео или стенограмма)</span>
+                <span className="w-5 h-5 rounded-md bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                  <MessageSquareWarning className="w-3.5 h-3.5" />
+                </span>
+                <span>2. Материалы встречи (аудио созвона или стенограмма)</span>
               </label>
               <span className="text-xs text-slate-500 dark:text-slate-400 font-mono tabular-nums">
                 {transcriptFile
@@ -372,7 +375,6 @@ export const SourceInputPanel: React.FC<SourceInputPanelProps> = ({
               </span>
             </div>
 
-            {/* Mobile-Friendly Touch Dropzone for Field 2 */}
             <div
               data-testid="dropzone-transcript"
               onDragOver={(e) => {
@@ -389,12 +391,12 @@ export const SourceInputPanel: React.FC<SourceInputPanelProps> = ({
               onClick={() => {
                 if (!transcriptFile) transcriptFileInputRef.current?.click();
               }}
-              className={`min-h-[60px] rounded-xl border border-dashed p-3.5 transition-colors ${
+              className={`group rounded-2xl border-2 border-dashed p-4 transition-all duration-200 ${
                 transcriptFile
-                  ? 'border-emerald-500/60 bg-emerald-50/50 dark:bg-emerald-950/20'
+                  ? 'border-emerald-500/70 bg-emerald-50/50 dark:bg-emerald-950/25'
                   : isDraggingTranscript
-                  ? 'border-indigo-600 bg-indigo-50/60 dark:bg-indigo-950/30 cursor-pointer'
-                  : 'border-slate-300 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-800/40 hover:border-indigo-500 cursor-pointer'
+                  ? 'border-emerald-500 bg-emerald-50/70 dark:bg-emerald-950/40 scale-[1.01] cursor-pointer'
+                  : 'border-slate-300/90 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-800/40 hover:border-indigo-500 hover:bg-indigo-50/30 dark:hover:bg-indigo-950/20 cursor-pointer'
               }`}
             >
               <input
@@ -411,12 +413,12 @@ export const SourceInputPanel: React.FC<SourceInputPanelProps> = ({
 
               {transcriptFile ? (
                 <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <FileAudio className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  <div className="flex items-center gap-3 min-w-0">
+                    <FileAudio className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
                     <div className="min-w-0">
                       <div
                         data-testid="transcript-file-name"
-                        className="text-xs font-semibold text-slate-900 dark:text-white truncate"
+                        className="text-xs font-bold text-slate-900 dark:text-white truncate"
                       >
                         {transcriptFile.name}
                       </div>
@@ -432,7 +434,7 @@ export const SourceInputPanel: React.FC<SourceInputPanelProps> = ({
                       e.stopPropagation();
                       onChangeTranscriptFile(null);
                     }}
-                    className="min-h-[40px] inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-red-700 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-950/40 rounded-lg transition-colors cursor-pointer shrink-0"
+                    className="min-h-[36px] inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-rose-700 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-950/40 rounded-xl transition-colors cursor-pointer shrink-0"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                     <span>Удалить</span>
@@ -440,19 +442,21 @@ export const SourceInputPanel: React.FC<SourceInputPanelProps> = ({
                 </div>
               ) : (
                 <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2.5">
-                    <UploadCloud className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center group-hover:scale-105 transition-transform">
+                      <UploadCloud className="w-4 h-4" />
+                    </div>
                     <div>
-                      <div className="text-xs font-semibold text-slate-800 dark:text-slate-200">
-                        Запись диктофона / созвона (MP3, WAV, M4A)
+                      <div className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                        Запись созвона (MP3, WAV, M4A) или видео
                       </div>
-                      <div className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
-                        Аудио, видео MP4/WEBM или текст стенограммы
+                      <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                        Нажмите для загрузки аудио или вставьте стенограмму ниже
                       </div>
                     </div>
                   </div>
-                  <span className="min-h-[36px] inline-flex items-center px-3 py-1 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg shrink-0">
-                    Медиа
+                  <span className="px-3 py-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shrink-0">
+                    Загрузить медиа
                   </span>
                 </div>
               )}
@@ -460,26 +464,27 @@ export const SourceInputPanel: React.FC<SourceInputPanelProps> = ({
 
             <textarea
               id="textarea-transcript"
-              rows={6}
+              rows={5}
               value={transcriptText}
               onChange={(e) => onChangeTranscriptText(e.target.value)}
               placeholder="Или вставьте текстовую стенограмму встречи Zoom/Meet / переписку из Telegram..."
-              className="w-full p-3.5 text-xs leading-relaxed font-mono bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-200 focus:bg-white dark:focus:bg-slate-800 focus:border-indigo-500 focus:outline-none transition-colors resize-y"
+              className="w-full p-3.5 text-xs leading-relaxed font-mono bg-white/90 dark:bg-slate-900/80 border border-slate-200/90 dark:border-slate-700 rounded-2xl text-slate-800 dark:text-slate-200 focus:border-indigo-500 focus:outline-none transition-colors resize-y"
             />
           </div>
         </div>
 
-        {/* Multi-Step Neural Scope Analysis Progress Indicator */}
+        {/* Pulsing AI Progress Bar when Analyzing */}
         {isAnalyzing && (
           <div
             data-testid="analysis-progress-panel"
             role="status"
             aria-live="polite"
-            className="p-4 sm:p-5 rounded-2xl bg-slate-900 dark:bg-indigo-950/90 border border-slate-800 dark:border-indigo-800 text-white space-y-3 shadow-lg animate-tab-fade"
+            className="p-5 rounded-2xl bg-[#0B0F19] text-white border border-indigo-500/40 space-y-3 animate-ai-pulse"
           >
             <div className="flex items-center justify-between text-xs font-semibold">
-              <span className="text-indigo-200">
-                {analysisStepText || 'Читаем ТЗ...'}
+              <span className="flex items-center gap-2 text-emerald-300">
+                <Sparkles className="w-4 h-4 animate-spin" />
+                <span>{analysisStepText || 'Читаем ТЗ...'}</span>
               </span>
               <span className="font-mono tabular-nums text-white">
                 {analysisProgress}%
@@ -487,7 +492,7 @@ export const SourceInputPanel: React.FC<SourceInputPanelProps> = ({
             </div>
             <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
               <div
-                className="h-full bg-gradient-to-r from-indigo-500 to-violet-400 transition-all duration-300"
+                className="h-full bg-gradient-to-r from-indigo-500 via-sky-400 to-emerald-400 transition-all duration-300"
                 style={{
                   width: `${Math.min(100, Math.max(10, analysisProgress))}%`,
                 }}
@@ -506,7 +511,7 @@ export const SourceInputPanel: React.FC<SourceInputPanelProps> = ({
                     key={step.label}
                     className={`truncate transition-colors ${
                       reached
-                        ? 'text-indigo-300 font-semibold'
+                        ? 'text-emerald-300 font-semibold'
                         : 'text-slate-500'
                     }`}
                   >
@@ -522,30 +527,33 @@ export const SourceInputPanel: React.FC<SourceInputPanelProps> = ({
           <div
             data-testid="validation-error-banner"
             role="alert"
-            className="p-3.5 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800/60 text-xs font-medium text-red-800 dark:text-red-300"
+            className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/60 text-xs font-medium text-rose-800 dark:text-rose-300"
           >
             {validationError}
           </div>
         )}
 
-        <div className="pt-1 space-y-3">
+        {/* Submit Action Row */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2">
+          <div className="text-xs text-slate-500 dark:text-slate-400">
+            Все найденные расхождения автоматически сохраняются в раздел «Архив»
+          </div>
+
           <button
             type="submit"
             data-testid="submit-audit-btn"
             disabled={isAnalyzing}
-            className="w-full min-h-[48px] inline-flex items-center justify-center gap-2 px-6 py-3 text-xs sm:text-sm font-semibold text-white bg-slate-900 dark:bg-indigo-600 hover:bg-indigo-600 dark:hover:bg-indigo-500 disabled:opacity-60 rounded-full transition-all cursor-pointer shadow-sm"
+            className={`min-h-[48px] inline-flex items-center justify-center gap-2.5 px-8 py-3 text-sm font-bold text-white bg-gradient-to-r from-indigo-600 via-indigo-500 to-emerald-500 hover:from-indigo-500 hover:to-emerald-400 disabled:opacity-60 rounded-2xl shadow-[0_10px_28px_-6px_rgba(79,70,229,0.5)] transition-all active:scale-95 cursor-pointer shrink-0 ${
+              isAnalyzing ? 'animate-ai-pulse' : ''
+            }`}
           >
-            <Play className="w-4 h-4" />
+            <Sparkles className="w-4 h-4" />
             <span>
               {isAnalyzing
                 ? analysisStepText || 'Читаем ТЗ...'
                 : 'Запустить юридический аудит Scope Creep'}
             </span>
           </button>
-
-          <div className="text-[11px] text-center text-slate-500 dark:text-slate-400">
-            Результат автоматически сохраняется в раздел «Библиотека работ»
-          </div>
         </div>
       </form>
     </section>

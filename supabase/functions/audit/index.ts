@@ -1,8 +1,5 @@
-import {
-  analyzeDocumentsHeuristic,
-  getFileExtension,
-  validateAuditReportSchema,
-} from '../../../src/utils/scopeAnalyzer.ts';
+// Standalone (single-file) Supabase Edge Function for ScopeGuard Legal Audit
+// Zero external or relative imports — ready for direct deployment via `supabase functions deploy audit`
 
 declare const Deno: {
   env: {
@@ -10,6 +7,40 @@ declare const Deno: {
   };
   serve(handler: (req: Request) => Response | Promise<Response>): void;
 };
+
+export type SeverityLevel = 'low' | 'medium' | 'critical';
+
+export interface OutOfScopeItem {
+  id: number;
+  title: string;
+  client_quote: string;
+  scope_conflict_reason: string;
+  suggested_hours: number;
+  severity: SeverityLevel;
+}
+
+export interface ClientEmailDraft {
+  subject: string;
+  body: string;
+}
+
+export interface ScopeAuditReport {
+  project_name: string;
+  audit_date: string;
+  out_of_scope_items: OutOfScopeItem[];
+  in_scope_items: string[];
+  client_email_draft: ClientEmailDraft;
+  change_order_summary: string;
+}
+
+export interface ScopeMetrics {
+  totalHours: number;
+  totalCost: number;
+  criticalCount: number;
+  mediumCount: number;
+  lowCount: number;
+  itemCount: number;
+}
 
 const corsHeaders: Record<string, string> = {
   'Access-Control-Allow-Origin': '*',
@@ -104,6 +135,398 @@ const RESPONSE_SCHEMA = {
   ],
 };
 
+function getFileExtension(filename: string): string {
+  const clean = filename.trim().toLowerCase();
+  const idx = clean.lastIndexOf('.');
+  return idx >= 0 ? clean.slice(idx) : '';
+}
+
+function clampSuggestedHours(hours: number): number {
+  if (!Number.isFinite(hours)) return 4;
+  return Math.max(1, Math.min(40, Math.round(hours)));
+}
+
+function truncateTitleToSixWords(title: string): string {
+  const cleaned = title.trim().replace(/\s+/g, ' ');
+  if (!cleaned) return 'Дополнительная доработка функционала';
+  const words = cleaned.split(' ');
+  if (words.length <= 6) return cleaned;
+  return words.slice(0, 6).join(' ');
+}
+
+function calculateScopeMetrics(
+  items: OutOfScopeItem[],
+  hourlyRate: number
+): ScopeMetrics {
+  const safeRate =
+    Number.isFinite(hourlyRate) && hourlyRate >= 0 ? hourlyRate : 0;
+  let totalHours = 0;
+  let criticalCount = 0;
+  let mediumCount = 0;
+  let lowCount = 0;
+
+  for (const item of items) {
+    const h = clampSuggestedHours(item.suggested_hours);
+    totalHours += h;
+    if (item.severity === 'critical') criticalCount += 1;
+    else if (item.severity === 'medium') mediumCount += 1;
+    else lowCount += 1;
+  }
+
+  return {
+    totalHours,
+    totalCost: totalHours * safeRate,
+    criticalCount,
+    mediumCount,
+    lowCount,
+    itemCount: items.length,
+  };
+}
+
+function formatMoney(amount: number): string {
+  return `${Math.round(amount).toLocaleString('ru-RU')} ед.`;
+}
+
+function rebuildChangeOrderSummary(
+  projectName: string,
+  auditDate: string,
+  items: OutOfScopeItem[],
+  hourlyRate = 4500
+): string {
+  const metrics = calculateScopeMetrics(items, hourlyRate);
+  if (items.length === 0) {
+    return `ДОПОЛНИТЕЛЬНОЕ СОГЛАШЕНИЕ К ДОГОВОРУ РАЗРАБОТКИ («${projectName}») от ${auditDate}: Дополнительных работ, выходящих за рамки утвержденного Технического задания, не выявлено.`;
+  }
+
+  const lines = items.map(
+    (item, idx) =>
+      `1.${idx + 1}. «${item.title}» (основание: запрос Заказчика ${item.client_quote}; расхождение с ТЗ: ${item.scope_conflict_reason}) — объем трудозатрат: ${clampSuggestedHours(item.suggested_hours)} нормо-ч.`
+  );
+
+  const formattedCost = formatMoney(metrics.totalCost);
+  const formattedRate = formatMoney(hourlyRate);
+
+  return [
+    `ПРИЛОЖЕНИЕ №1 (CHANGE ORDER) К ДОГОВОРУ НА РАЗРАБОТКУ ПРОГРАММНОГО ОБЕСПЕЧЕНИЯ по проекту «${projectName}» от ${auditDate}.`,
+    `1. Стороны пришли к соглашению расширить перечень работ по Техническому заданию следующими дополнительными задачами, инициированными Заказчиком в ходе рабочей встречи:`,
+    ...lines,
+    `2. Совокупная оценка дополнительных трудозатрат Исполнителя составляет ${metrics.totalHours} нормо-часов. При расчетной ставке ${formattedRate}/час стоимость дополнительных работ составляет ${formattedCost} (без НДС).`,
+    `3. Сроки сдачи этапа по Основному договору соразмерно сдвигаются на ${Math.max(1, Math.ceil(metrics.totalHours / 6))} рабочих дн. с момента подписания настоящего Дополнительного соглашения и внесения предоплаты.`,
+  ].join('\n');
+}
+
+function rebuildClientEmailDraft(
+  projectName: string,
+  items: OutOfScopeItem[],
+  inScopeItems: string[],
+  hourlyRate = 4500
+): ClientEmailDraft {
+  const metrics = calculateScopeMetrics(items, hourlyRate);
+  const subject = `Итоги рабочей встречи по проекту «${projectName}»: фиксация договоренностей и оценка новых задач`;
+
+  const inScopeBlock =
+    inScopeItems.length > 0
+      ? `1. ЗАДАЧИ В РАМКАХ ТЕКУЩЕГО ТЗ (уже в работе без доплат и сдвига сроков):\n` +
+        inScopeItems.map((entry) => `• ${entry}`).join('\n')
+      : `1. ЗАДАЧИ В РАМКАХ ТЕКУЩЕГО ТЗ:\n• Все базовые требования согласно исходной спецификации выполняются по графику.`;
+
+  if (items.length === 0) {
+    return {
+      subject,
+      body: `Здравствуйте!\n\nБлагодарим за продуктивный созвон по проекту «${projectName}». Мы сверили все обсуждавшиеся вопросы с нашим текущим Техническим заданием.\n\n${inScopeBlock}\n\nВсе озвученные пожелания полностью укладываются в утвержденный объем работ. Продолжаем разработку в штатном режиме!`,
+    };
+  }
+
+  const outOfScopeBlock = items
+    .map(
+      (item, index) =>
+        `${index + 1}) ${item.title} — предварительная оценка: ${clampSuggestedHours(item.suggested_hours)} ч (${formatMoney(clampSuggestedHours(item.suggested_hours) * hourlyRate)}).\n   Контекст созвона: ${item.client_quote}\n   Статус по ТЗ: ${item.scope_conflict_reason}`
+    )
+    .join('\n\n');
+
+  const formattedCost = formatMoney(metrics.totalCost);
+
+  const body = [
+    `Здравствуйте!`,
+    `Спасибо за продуктивное обсуждение проекта «${projectName}». Мы внимательно разобрали запись встречи и резюмировали все тезисы, чтобы синхронизировать ожидания и защитить сроки запуска основного релиза.`,
+    inScopeBlock,
+    `2. НОВЫЕ ПОЖЕЛАНИЯ И РАЗВИТИЕ ПРОДУКТА (выходят за рамки утвержденного ТЗ):\nВ ходе обсуждения прозвучали отличные идеи, которые усилят продукт, но требуют дополнительной архитектуры и не были заложены в исходную смету:\n\n${outOfScopeBlock}`,
+    `Суммарная оценка дополнительных доработок составляет ${metrics.totalHours} ч. (${formattedCost} по ставке договора).`,
+    `Как предлагаем поступить:\nВариант А — Мы фиксируем эти задачи в Дополнительном соглашении (Change Order, проект текста приложен ниже) и включаем их в план работ.\nВариант Б — Чтобы не сдвигать дату ближайшего релиза и не увеличивать бюджет текущего спринта, выносим эти пункты во 2-ю очередь развития (Backlog v1.1) сразу после сдачи базовой версии.`,
+    `Подскажите, какой вариант для вас комфортнее по приоритетам и бюджету?`,
+    `С уважением,\nКоманда управления проектом и правового сопровождения`,
+  ].join('\n\n');
+
+  return { subject, body };
+}
+
+function validateAuditReportSchema(
+  raw: unknown,
+  fallbackProjectName = 'Проект разработки ПО'
+): ScopeAuditReport {
+  const obj = (typeof raw === 'object' && raw !== null ? raw : {}) as Record<
+    string,
+    unknown
+  >;
+
+  const project_name =
+    typeof obj.project_name === 'string' && obj.project_name.trim()
+      ? obj.project_name.trim()
+      : fallbackProjectName;
+
+  const audit_date =
+    typeof obj.audit_date === 'string' && obj.audit_date.trim()
+      ? obj.audit_date.trim()
+      : new Date().toISOString().slice(0, 10);
+
+  const rawOut = Array.isArray(obj.out_of_scope_items)
+    ? obj.out_of_scope_items
+    : [];
+
+  const out_of_scope_items: OutOfScopeItem[] = rawOut.map((entry, idx) => {
+    const item = (
+      typeof entry === 'object' && entry !== null ? entry : {}
+    ) as Record<string, unknown>;
+    const rawSeverity =
+      typeof item.severity === 'string' ? item.severity.toLowerCase() : 'medium';
+    const severity: SeverityLevel =
+      rawSeverity === 'critical' ||
+      rawSeverity === 'low' ||
+      rawSeverity === 'medium'
+        ? rawSeverity
+        : 'medium';
+
+    return {
+      id:
+        typeof item.id === 'number' && Number.isInteger(item.id)
+          ? item.id
+          : idx + 1,
+      title: truncateTitleToSixWords(
+        typeof item.title === 'string' ? item.title : `Доработка №${idx + 1}`
+      ),
+      client_quote:
+        typeof item.client_quote === 'string' && item.client_quote.trim()
+          ? item.client_quote.trim()
+          : '[Без таймкода] Запрос в ходе обсуждения',
+      scope_conflict_reason:
+        typeof item.scope_conflict_reason === 'string' &&
+        item.scope_conflict_reason.trim()
+          ? item.scope_conflict_reason.trim()
+          : 'Отсутствует в утвержденном ТЗ и смете проекта.',
+      suggested_hours: clampSuggestedHours(Number(item.suggested_hours ?? 8)),
+      severity,
+    };
+  });
+
+  const in_scope_items: string[] = Array.isArray(obj.in_scope_items)
+    ? obj.in_scope_items
+        .filter(
+          (x): x is string => typeof x === 'string' && x.trim().length > 0
+        )
+        .map((x) => x.trim())
+    : [];
+
+  const rawEmail = (
+    typeof obj.client_email_draft === 'object' &&
+    obj.client_email_draft !== null
+      ? obj.client_email_draft
+      : {}
+  ) as Record<string, unknown>;
+
+  const fallbackEmail = rebuildClientEmailDraft(
+    project_name,
+    out_of_scope_items,
+    in_scope_items
+  );
+
+  const client_email_draft: ClientEmailDraft = {
+    subject:
+      typeof rawEmail.subject === 'string' && rawEmail.subject.trim()
+        ? rawEmail.subject.trim()
+        : fallbackEmail.subject,
+    body:
+      typeof rawEmail.body === 'string' && rawEmail.body.trim()
+        ? rawEmail.body.trim()
+        : fallbackEmail.body,
+  };
+
+  const change_order_summary =
+    typeof obj.change_order_summary === 'string' &&
+    obj.change_order_summary.trim()
+      ? obj.change_order_summary.trim()
+      : rebuildChangeOrderSummary(project_name, audit_date, out_of_scope_items);
+
+  return {
+    project_name,
+    audit_date,
+    out_of_scope_items,
+    in_scope_items,
+    client_email_draft,
+    change_order_summary,
+  };
+}
+
+function analyzeDocumentsHeuristic(
+  projectName: string,
+  specText: string,
+  transcriptText: string,
+  auditDate = '2026-11-11',
+  hourlyRate = 4500
+): ScopeAuditReport {
+  const cleanProject = projectName.trim() || 'Аудит проекта';
+  const lines = transcriptText
+    .split(/\n+/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+
+  const outOfScope: OutOfScopeItem[] = [];
+  const inScope: string[] = [];
+
+  const triggerPatterns: Array<{
+    regex: RegExp;
+    title: string;
+    reason: string;
+    hours: number;
+    severity: SeverityLevel;
+  }> = [
+    {
+      regex: /1с|erp|sap|битрикс24|bitrix|amo|амо/i,
+      title: 'Двусторонняя интеграция с внешней системой',
+      reason:
+        'В ТЗ не предусмотрена двусторонняя синхронизация с внешними учетными системами (ERP/1С/CRM).',
+      hours: 28,
+      severity: 'critical',
+    },
+    {
+      regex:
+        /телеграм|telegram|чат-?бот|бот\b|бота\b|боту\b|ботом\b|whatsapp|мессенджер/i,
+      title: 'Разработка бота и уведомлений мессенджеров',
+      reason:
+        'В исходном ТЗ зафиксированы только базовые Email-уведомления; разработка Telegram/WhatsApp-бота отсутствует в смете.',
+      hours: 18,
+      severity: 'medium',
+    },
+    {
+      regex: /темн(ая|ую)\s+тем|dark\s*mode|анимац|3d|кастомн.*дизайн/i,
+      title: 'Кастомная темная тема и анимации',
+      reason:
+        'Раздел UI/UX ТЗ предусматривает только одну светлую дизайн-тему по базовому UI-киту без темного режима.',
+      hours: 14,
+      severity: 'low',
+    },
+    {
+      regex: /мультиязыч|английск|китайск|локализац|i18n|валют/i,
+      title: 'Мультиязычная локализация и мульти-валютность',
+      reason:
+        'Пункт 1.2 ТЗ фиксирует разработку интерфейса исключительно на русском языке и расчеты в одной базовой валюте.',
+      hours: 22,
+      severity: 'medium',
+    },
+    {
+      regex: /приложени(е|я)|ios|android|мобильн.*приложен|pwa|офлайн/i,
+      title: 'Мобильное приложение и офлайн-режим',
+      reason:
+        'Предмет договора ограничен адаптивным веб-приложением; нативная/офлайн мобильная функциональность не входит в ТЗ.',
+      hours: 36,
+      severity: 'critical',
+    },
+    {
+      regex: /роли|права\s+доступа|суперадмин|аудит\s+лог|rbac|иерархи/i,
+      title: 'Гибкая ролевая матрица прав доступа',
+      reason:
+        'В ТЗ заложены только 2 фиксированные роли (Администратор и Пользователь) без конструктора гранулярных прав.',
+      hours: 20,
+      severity: 'medium',
+    },
+    {
+      regex: /экспорт|pdf|excel|xlsx|отчет.*конструктор|bi|аналитик/i,
+      title: 'Генерация кастомных PDF/Excel отчетов',
+      reason:
+        'Раздел отчетности в ТЗ включает только просмотр таблицы в браузере без генератора печатных форм PDF/XLSX.',
+      hours: 12,
+      severity: 'low',
+    },
+  ];
+
+  for (const line of lines) {
+    let matchedOut = false;
+    for (const pat of triggerPatterns) {
+      if (pat.regex.test(line)) {
+        const alreadyExcludedInSpec =
+          specText.toLowerCase().includes('не входит') ||
+          !pat.regex.test(specText);
+        if (
+          alreadyExcludedInSpec &&
+          !outOfScope.some((i) => i.title === pat.title)
+        ) {
+          outOfScope.push({
+            id: outOfScope.length + 1,
+            title: truncateTitleToSixWords(pat.title),
+            client_quote: line,
+            scope_conflict_reason: pat.reason,
+            suggested_hours: clampSuggestedHours(pat.hours),
+            severity: pat.severity,
+          });
+          matchedOut = true;
+        }
+      }
+    }
+
+    if (
+      !matchedOut &&
+      /авторизац|каталог|корзин|базов|по\s+тз|стандартн|главн.*страниц|фильтр/i.test(
+        line
+      )
+    ) {
+      if (inScope.length < 4) {
+        inScope.push(
+          `Подтверждена реализация штатного функционала из ТЗ: «${line.slice(0, 110)}»`
+        );
+      }
+    }
+  }
+
+  if (outOfScope.length === 0 && lines.length > 0) {
+    outOfScope.push({
+      id: 1,
+      title: 'Дополнительные правки вне исходного ТЗ',
+      client_quote: lines[lines.length - 1],
+      scope_conflict_reason:
+        'Требование озвучено устно на созвоне и отсутствует в зафиксированной спецификации Приложения №1.',
+      suggested_hours: 10,
+      severity: 'medium',
+    });
+  }
+
+  if (inScope.length === 0) {
+    inScope.push(
+      'Базовая архитектура и ключевые пользовательские сценарии в рамках утвержденного Технического задания'
+    );
+  }
+
+  const client_email_draft = rebuildClientEmailDraft(
+    cleanProject,
+    outOfScope,
+    inScope,
+    hourlyRate
+  );
+  const change_order_summary = rebuildChangeOrderSummary(
+    cleanProject,
+    auditDate,
+    outOfScope,
+    hourlyRate
+  );
+
+  return {
+    project_name: cleanProject,
+    audit_date: auditDate,
+    out_of_scope_items: outOfScope,
+    in_scope_items: inScope,
+    client_email_draft,
+    change_order_summary,
+  };
+}
+
 function resolveMimeType(fileName: string, fallbackType?: string): string {
   const ext = getFileExtension(fileName);
   const map: Record<string, string> = {
@@ -163,7 +586,6 @@ async function extractTextOrSynthesize(
 }
 
 export async function handleAuditRequest(req: Request): Promise<Response> {
-  // 1. Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', {
       status: 200,
@@ -277,7 +699,6 @@ export async function handleAuditRequest(req: Request): Promise<Response> {
       );
     }
 
-    // Build Gemini REST API payload
     const parts: Array<Record<string, unknown>> = [];
 
     for (const [label, fileObj] of [
@@ -379,6 +800,4 @@ ${effectiveTranscriptText || '(См. прикрепленный медиафай
   }
 }
 
-if (typeof Deno !== 'undefined' && typeof Deno.serve === 'function') {
-  Deno.serve(handleAuditRequest);
-}
+Deno.serve(handleAuditRequest);

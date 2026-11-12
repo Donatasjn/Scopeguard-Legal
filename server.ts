@@ -15,10 +15,12 @@ import {
   validateUploadedFileMeta,
 } from './src/utils/scopeAnalyzer.ts';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const rootDir =
+  typeof import.meta?.url === 'string' && import.meta.url.startsWith('file:')
+    ? path.dirname(fileURLToPath(import.meta.url))
+    : process.cwd();
 
-const app = express();
+export const app = express();
 app.set('trust proxy', 1);
 app.use(express.json({ limit: '5mb' }));
 
@@ -166,7 +168,9 @@ const SYSTEM_INSTRUCTION = `Ты — бескомпромиссный и дот�
 - Сформируй формальный юридический текст для приложения к договору (Change Order).
 Отвечай строго в формате JSON по заданной схеме на русском языке.`;
 
-app.get('/api/health', (_req, res) => {
+const apiRouter = express.Router();
+
+apiRouter.get('/health', (_req, res) => {
   res.json({
     status: 'ok',
     rateLimitActive: true,
@@ -174,8 +178,8 @@ app.get('/api/health', (_req, res) => {
   });
 });
 
-app.post(
-  '/api/audit',
+apiRouter.post(
+  '/audit',
   auditRateLimiter,
   uploadFieldsMiddleware,
   async (req: Request, res: Response) => {
@@ -243,7 +247,7 @@ app.post(
         'transcript'
       );
 
-      // Strictly read GEMINI_API_KEY from server environment
+      // Strictly read GEMINI_API_KEY from process.env.GEMINI_API_KEY
       const apiKey = process.env.GEMINI_API_KEY;
       const hasValidKey =
         typeof apiKey === 'string' &&
@@ -452,16 +456,21 @@ ${effectiveTranscriptText || '(См. прикрепленный медиафай
   }
 );
 
-async function startServer() {
-  const port = Number(process.env.PORT) || 3000;
-  const distPath = path.resolve(__dirname, 'dist');
+// Support standard /api/* routes as well as Netlify Functions rewritten paths (/.netlify/functions/api/* and /*)
+app.use(['/api', '/.netlify/functions/api', '/'], apiRouter);
+
+export async function startServer() {
+  const port = Number(process.env.PORT) || 7860;
+  const host = '0.0.0.0';
+  const distPath = path.resolve(rootDir, 'dist');
   const distIndexHtml = path.join(distPath, 'index.html');
   const isProdMode =
     process.env.NODE_ENV === 'production' ||
     (process.env.npm_lifecycle_event === 'start' && fs.existsSync(distIndexHtml));
 
   if (!isProdMode) {
-    const { createServer: createViteServer } = await import('vite');
+    const vitePkg = 'vite';
+    const { createServer: createViteServer } = await import(vitePkg);
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
@@ -479,13 +488,25 @@ async function startServer() {
     });
   }
 
-  app.listen(port, '0.0.0.0', () => {
+  app.listen(port, host, () => {
     console.log(
-      `ScopeGuard server listening on http://localhost:${port} (mode: ${
+      `ScopeGuard server listening on http://${host}:${port} (mode: ${
         isProdMode ? 'production' : 'development'
       })`
     );
   });
 }
 
-startServer();
+const isServerlessRuntime = Boolean(
+  process.env.NETLIFY ||
+    process.env.AWS_LAMBDA_FUNCTION_NAME ||
+    process.env.AWS_EXECUTION_ENV
+);
+const isDirectExecution =
+  !isServerlessRuntime &&
+  Boolean(process.argv[1]) &&
+  path.resolve(process.argv[1]).endsWith('server.ts');
+
+if (isDirectExecution) {
+  startServer();
+}

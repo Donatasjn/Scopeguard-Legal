@@ -406,7 +406,8 @@ export default function App() {
         formData.append('transcriptFile', transcriptFile);
       }
 
-      const response = await fetch('/api/audit', {
+      const apiUrl = import.meta.env.VITE_API_URL || '/api/audit';
+      const response = await fetch(apiUrl, {
         method: 'POST',
         body: formData,
       });
@@ -423,7 +424,7 @@ export default function App() {
 
       const userEnteredName = projectName.trim();
       const validated = validateAuditReportSchema(
-        data.report,
+        data?.report ?? data,
         userEnteredName || 'Аудит ИТ-проекта'
       );
       const finalProjectName = userEnteredName || validated.project_name;

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
+  Check,
   ChevronDown,
   CreditCard,
   FolderClock,
@@ -66,7 +67,9 @@ export const TopBar: React.FC<NavigationHubProps> = ({
 }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
+  const [isCurrencyMenuOpen, setIsCurrencyMenuOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
+  const currencyDropdownRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -75,6 +78,12 @@ export const TopBar: React.FC<NavigationHubProps> = ({
         !dropdownRef.current.contains(event.target as Node)
       ) {
         setIsAccountMenuOpen(false);
+      }
+      if (
+        currencyDropdownRef.current &&
+        !currencyDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsCurrencyMenuOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -225,23 +234,64 @@ export const TopBar: React.FC<NavigationHubProps> = ({
 
           {/* Zone 3: Currency, Theme, Pro & Interactive User Profile Widget */}
           <div className="flex items-center gap-2 shrink-0">
-            <select
-              aria-label="Выбор валюты"
-              data-testid="header-currency-select"
-              value={currency}
-              onChange={(e) => onChangeCurrency(e.target.value as CurrencyCode)}
-              className={`min-h-[36px] px-2.5 py-1 text-xs font-mono font-semibold rounded-xl border focus:outline-none cursor-pointer transition-colors ${
-                isLandingDarkHero
-                  ? 'bg-white/10 text-white border-white/15 hover:bg-white/15 [&>option]:text-slate-900'
-                  : 'bg-slate-100/90 dark:bg-slate-800 text-slate-800 dark:text-slate-100 border-slate-200/80 dark:border-slate-700 hover:bg-slate-200/70'
-              }`}
-            >
-              {CURRENCY_ORDER.map((code) => (
-                <option key={code} value={code}>
-                  {CURRENCY_CONFIGS[code].label}
-                </option>
-              ))}
-            </select>
+            <div className="relative" ref={currencyDropdownRef}>
+              <button
+                type="button"
+                aria-label="Выбор валюты"
+                aria-haspopup="listbox"
+                aria-expanded={isCurrencyMenuOpen}
+                data-testid="header-currency-select"
+                onClick={() => setIsCurrencyMenuOpen((prev) => !prev)}
+                className={`min-h-[36px] inline-flex items-center gap-1.5 px-3 py-1 text-xs font-mono font-bold rounded-xl border focus:outline-none cursor-pointer transition-all active:scale-95 ${
+                  isLandingDarkHero
+                    ? 'bg-slate-900/90 text-white border-slate-700/80 hover:border-indigo-500/70'
+                    : 'bg-slate-900/90 dark:bg-slate-900/95 text-white border-slate-700/80 hover:border-indigo-500/70 shadow-xs'
+                }`}
+              >
+                <span>{CURRENCY_CONFIGS[currency].label}</span>
+                <ChevronDown
+                  className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${
+                    isCurrencyMenuOpen ? 'rotate-180 text-indigo-400' : ''
+                  }`}
+                />
+              </button>
+
+              {isCurrencyMenuOpen && (
+                <div
+                  role="listbox"
+                  aria-label="Список валют"
+                  data-testid="currency-dropdown-menu"
+                  className="absolute right-0 mt-2 w-40 rounded-2xl bg-slate-900/95 backdrop-blur-2xl border border-slate-700/80 p-1.5 shadow-[0_20px_50px_-10px_rgba(0,0,0,0.65)] space-y-1 animate-modal-content z-50 text-slate-100"
+                >
+                  {CURRENCY_ORDER.map((code) => {
+                    const isSelected = currency === code;
+                    return (
+                      <button
+                        key={code}
+                        type="button"
+                        role="option"
+                        aria-selected={isSelected}
+                        data-testid={`currency-option-${code}`}
+                        onClick={() => {
+                          onChangeCurrency(code);
+                          setIsCurrencyMenuOpen(false);
+                        }}
+                        className={`w-full min-h-[36px] flex items-center justify-between px-3 py-1.5 text-xs font-mono font-bold rounded-xl transition-all cursor-pointer ${
+                          isSelected
+                            ? 'bg-gradient-to-r from-indigo-600/90 to-violet-600/90 text-white shadow-xs'
+                            : 'text-slate-300 hover:bg-slate-800/90 hover:text-white'
+                        }`}
+                      >
+                        <span>{CURRENCY_CONFIGS[code].label}</span>
+                        {isSelected && (
+                          <Check className="w-3.5 h-3.5 text-emerald-300 shrink-0" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
 
             <button
               type="button"

@@ -14,9 +14,10 @@ import {
   X,
 } from 'lucide-react';
 import {
-  signInQuickDemoProfile,
+  sendEmailOtpCode,
   signInWithEmailPassword,
   signUpWithEmailPassword,
+  verifyEmailOtpCode,
   type UserProfile,
 } from '../lib/supabase';
 import { BrandLogoIcon } from './BrandLogo';
@@ -35,21 +36,58 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   reasonMessage,
 }) => {
   const [mode, setMode] = useState<'login' | 'register'>('login');
+  const [loginMethod, setLoginMethod] = useState<'password' | 'otp'>('password');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
+  const [otpCode, setOtpCode] = useState('');
+  const [otpSent, setOtpSent] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorText, setErrorText] = useState<string | null>(null);
+  const [infoText, setInfoText] = useState<string | null>(null);
 
   if (!isOpen) return null;
+
+  const handleSendOtp = async () => {
+    setErrorText(null);
+    setInfoText(null);
+    setIsLoading(true);
+    try {
+      const res = await sendEmailOtpCode(email);
+      if (!res.sent || res.error) {
+        setErrorText(res.error || 'Не удалось отправить код на почту.');
+        return;
+      }
+      setOtpSent(true);
+      setInfoText(`Одноразовый код отправлен на ${email.trim()}. Введите код ниже.`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorText(null);
+    setInfoText(null);
     setIsLoading(true);
 
     try {
       if (mode === 'login') {
+        if (loginMethod === 'otp') {
+          if (!otpSent) {
+            await handleSendOtp();
+            return;
+          }
+          const { profile, error } = await verifyEmailOtpCode(email, otpCode);
+          if (error || !profile) {
+            setErrorText(error || 'Неверный код подтверждения.');
+            return;
+          }
+          onAuthSuccess(profile, false);
+          onClose();
+          return;
+        }
+
         const { profile, error } = await signInWithEmailPassword(
           email,
           password
@@ -77,25 +115,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         onAuthSuccess(profile, true);
         onClose();
       }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleQuickDemoLogin = async (
-    demoEmail: string,
-    demoPass: string,
-    demoName: string
-  ) => {
-    setErrorText(null);
-    setEmail(demoEmail);
-    setPassword(demoPass);
-    setFullName(demoName);
-    setIsLoading(true);
-    try {
-      const profile = await signInQuickDemoProfile(demoEmail, demoName);
-      onAuthSuccess(profile, false);
-      onClose();
     } finally {
       setIsLoading(false);
     }
@@ -172,6 +191,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             onClick={() => {
               setMode('login');
               setErrorText(null);
+              setInfoText(null);
             }}
             className={`min-h-[38px] inline-flex items-center justify-center gap-1.5 px-4 py-1.5 text-xs font-bold rounded-xl transition-all active:scale-95 cursor-pointer ${
               mode === 'login'
@@ -191,6 +211,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             onClick={() => {
               setMode('register');
               setErrorText(null);
+              setInfoText(null);
             }}
             className={`min-h-[38px] inline-flex items-center justify-center gap-1.5 px-4 py-1.5 text-xs font-bold rounded-xl transition-all active:scale-95 cursor-pointer ${
               mode === 'register'
@@ -229,12 +250,33 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           )}
 
           <div>
-            <label
-              htmlFor="auth-email"
-              className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5"
-            >
-              Рабочий Email
-            </label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label
+                htmlFor="auth-email"
+                className="block text-xs font-semibold text-slate-700 dark:text-slate-300"
+              >
+                Рабочий Email
+              </label>
+              {mode === 'login' && (
+                <button
+                  type="button"
+                  data-testid="toggle-login-method-btn"
+                  onClick={() => {
+                    setLoginMethod((prev) =>
+                      prev === 'password' ? 'otp' : 'password'
+                    );
+                    setErrorText(null);
+                    setInfoText(null);
+                    setOtpSent(false);
+                  }}
+                  className="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
+                >
+                  {loginMethod === 'password'
+                    ? 'Войти по коду из почты'
+                    : 'Войти по паролю'}
+                </button>
+              )}
+            </div>
             <div className="relative">
               <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
@@ -251,31 +293,64 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             </div>
           </div>
 
-          <div>
-            <label
-              htmlFor="auth-password"
-              className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5"
-            >
-              Пароль (минимум 6 символов)
-            </label>
-            <div className="relative">
-              <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-              <input
-                id="auth-password"
-                data-testid="auth-password-input"
-                type="password"
-                required
-                minLength={6}
-                autoComplete={
-                  mode === 'login' ? 'current-password' : 'new-password'
-                }
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full min-h-[44px] pl-10 pr-4 py-2 text-xs sm:text-sm font-medium bg-slate-50/90 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-900 focus:border-indigo-500 focus:outline-none transition-colors"
-              />
+          {mode === 'login' && loginMethod === 'otp' ? (
+            otpSent && (
+              <div>
+                <label
+                  htmlFor="auth-otp-code"
+                  className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5"
+                >
+                  Код подтверждения из письма
+                </label>
+                <div className="relative">
+                  <KeyRound className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <input
+                    id="auth-otp-code"
+                    data-testid="auth-otp-input"
+                    type="text"
+                    required
+                    value={otpCode}
+                    onChange={(e) => setOtpCode(e.target.value)}
+                    placeholder="6-значный код"
+                    className="w-full min-h-[44px] pl-10 pr-4 py-2 text-xs sm:text-sm font-mono font-bold tracking-widest bg-slate-50/90 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-900 focus:border-indigo-500 focus:outline-none transition-colors"
+                  />
+                </div>
+              </div>
+            )
+          ) : (
+            <div>
+              <label
+                htmlFor="auth-password"
+                className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5"
+              >
+                Пароль (минимум 6 символов)
+              </label>
+              <div className="relative">
+                <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  id="auth-password"
+                  data-testid="auth-password-input"
+                  type="password"
+                  required
+                  minLength={6}
+                  autoComplete={
+                    mode === 'login' ? 'current-password' : 'new-password'
+                  }
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full min-h-[44px] pl-10 pr-4 py-2 text-xs sm:text-sm font-medium bg-slate-50/90 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-900 focus:border-indigo-500 focus:outline-none transition-colors"
+                />
+              </div>
             </div>
-          </div>
+          )}
+
+          {infoText && (
+            <div className="p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/60 flex items-start gap-2 text-xs font-medium text-emerald-800 dark:text-emerald-300">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+              <span>{infoText}</span>
+            </div>
+          )}
 
           {errorText && (
             <div
@@ -307,7 +382,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <>
                 <span>
                   {mode === 'login'
-                    ? 'Войти в личный кабинет'
+                    ? loginMethod === 'otp'
+                      ? otpSent
+                        ? 'Подтвердить код и войти'
+                        : 'Получить код на почту'
+                      : 'Войти в личный кабинет'
                     : 'Зарегистрироваться и начать'}
                 </span>
                 <ArrowRight className="w-4 h-4" />
@@ -315,62 +394,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             )}
           </button>
         </form>
-
-        {/* Quick 1-Click Demo Accounts for Instant Verification */}
-        <div className="pt-4 border-t border-slate-200/80 dark:border-slate-800 space-y-2.5">
-          <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 flex items-center justify-between">
-            <span>Быстрый вход в 1 клик (Демо / Тест ролей):</span>
-            <span className="font-mono text-[10px] text-indigo-600 dark:text-indigo-400">
-              Supabase Auth
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            <button
-              type="button"
-              data-testid="quick-login-user-btn"
-              disabled={isLoading}
-              onClick={() =>
-                handleQuickDemoLogin(
-                  'pm@binarywave.studio',
-                  'scopeguard2026',
-                  'BinaryWave Digital Studio'
-                )
-              }
-              className="p-2.5 rounded-xl border border-slate-200/90 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/50 hover:border-indigo-400 dark:hover:border-indigo-500 text-left transition-all active:scale-95 cursor-pointer"
-            >
-              <div className="flex items-center gap-1.5 text-xs font-bold text-slate-900 dark:text-white">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                <span>ИТ-Студия (Pro)</span>
-              </div>
-              <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400 truncate mt-0.5">
-                pm@binarywave.studio
-              </div>
-            </button>
-
-            <button
-              type="button"
-              data-testid="quick-login-admin-btn"
-              disabled={isLoading}
-              onClick={() =>
-                handleQuickDemoLogin(
-                  'donatas.jn@gmail.com',
-                  'adminscope2026',
-                  'Donatas · Lead Architect (Admin)'
-                )
-              }
-              className="p-2.5 rounded-xl border border-indigo-200/90 dark:border-indigo-900/70 bg-indigo-50/50 dark:bg-indigo-950/30 hover:border-indigo-500 text-left transition-all active:scale-95 cursor-pointer"
-            >
-              <div className="flex items-center gap-1.5 text-xs font-bold text-indigo-950 dark:text-indigo-200">
-                <ShieldCheck className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
-                <span>Разработчик (Admin)</span>
-              </div>
-              <div className="text-[11px] font-mono text-indigo-700/80 dark:text-indigo-300/80 truncate mt-0.5">
-                donatas.jn@gmail.com
-              </div>
-            </button>
-          </div>
-        </div>
       </div>
     </div>
   );

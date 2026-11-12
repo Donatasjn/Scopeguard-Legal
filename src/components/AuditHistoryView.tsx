@@ -188,7 +188,7 @@ export const AuditHistoryView: React.FC<AuditHistoryViewProps> = ({
                 aria-label="Фильтр по дате аудита"
                 value={dateFilter}
                 onChange={(e) => setDateFilter(e.target.value)}
-                className="min-h-[42px] px-4 py-2 text-xs font-mono font-semibold bg-[#EDF2FA] dark:bg-slate-800 border border-transparent rounded-full text-slate-800 dark:text-slate-100 focus:border-indigo-500 focus:outline-none cursor-pointer"
+                className="min-h-[42px] px-4 py-2 text-xs font-mono font-semibold bg-slate-900 border border-slate-700/80 rounded-full text-slate-100 focus:border-indigo-500 focus:outline-none cursor-pointer [&>option]:bg-slate-900 [&>option]:text-slate-100"
               >
                 <option value="all">Все даты ({entries.length})</option>
                 {availableDates.map((dateStr) => (

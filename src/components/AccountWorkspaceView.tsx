@@ -355,27 +355,33 @@ export const AccountWorkspaceView: React.FC<AccountWorkspaceViewProps> = ({
             </form>
           </div>
 
-          {/* Admin Access Switcher for Testing / Developer Role */}
-          <div className="pt-4 border-t border-slate-200/70 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs">
-            <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
-              <ShieldCheck className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-              <span>
-                Права разработчика (поле <code className="font-mono">profiles.is_admin</code>):
-              </span>
+          {/* Admin Access Switcher for Developer Role (visible only to admin account) */}
+          {(profile.is_admin ||
+            profile.email.toLowerCase() === 'donatas.jn@gmail.com') && (
+            <div className="pt-4 border-t border-slate-200/70 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
+                <ShieldCheck className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                <span>
+                  Права разработчика (поле{' '}
+                  <code className="font-mono">profiles.is_admin</code>):
+                </span>
+              </div>
+              <button
+                type="button"
+                data-testid="toggle-admin-role-btn"
+                onClick={handleToggleAdminMode}
+                className={`min-h-[34px] px-3.5 py-1 rounded-lg font-mono text-xs font-bold transition-all active:scale-95 cursor-pointer ${
+                  profile.is_admin
+                    ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700'
+                }`}
+              >
+                {profile.is_admin
+                  ? 'is_admin: true (Активен)'
+                  : 'is_admin: false (Включить)'}
+              </button>
             </div>
-            <button
-              type="button"
-              data-testid="toggle-admin-role-btn"
-              onClick={handleToggleAdminMode}
-              className={`min-h-[34px] px-3.5 py-1 rounded-lg font-mono text-xs font-bold transition-all active:scale-95 cursor-pointer ${
-                profile.is_admin
-                  ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
-                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700'
-              }`}
-            >
-              {profile.is_admin ? 'is_admin: true (Активен)' : 'is_admin: false (Включить)'}
-            </button>
-          </div>
+          )}
         </section>
 
         {/* Card 2: Subscription & Audits Quota Progress */}

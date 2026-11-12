@@ -266,7 +266,7 @@ export const ScopeItemsTable: React.FC<ScopeItemsTableProps> = ({
                             e.target.value as SeverityLevel
                           )
                         }
-                        className="min-h-[44px] px-2.5 py-1.5 text-xs font-semibold rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200"
+                        className="min-h-[44px] px-2.5 py-1.5 text-xs font-semibold rounded-xl bg-slate-900 border border-slate-700 text-slate-100 [&>option]:bg-slate-900 [&>option]:text-slate-100"
                       >
                         <option value="critical">Критичный</option>
                         <option value="medium">Средний</option>
@@ -360,7 +360,7 @@ export const ScopeItemsTable: React.FC<ScopeItemsTableProps> = ({
                                   e.target.value as SeverityLevel
                                 )
                               }
-                              className={`bg-transparent font-semibold focus:outline-none cursor-pointer ${
+                              className={`bg-transparent font-semibold focus:outline-none cursor-pointer [&>option]:bg-slate-900 [&>option]:text-slate-100 ${
                                 item.severity === 'critical'
                                   ? 'text-red-700 dark:text-red-400'
                                   : item.severity === 'medium'

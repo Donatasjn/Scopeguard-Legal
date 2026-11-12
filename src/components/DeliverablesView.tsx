@@ -98,16 +98,16 @@ export const DeliverablesView: React.FC<DeliverablesViewProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Smooth Deliverable View Tab Switcher */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-3.5 shadow-xs">
+      {/* Google Docs Compact Pill Toolbar for Deliverable Sheets */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 gdocs-sheet rounded-full px-4 py-2.5">
         <div
           role="tablist"
           aria-label="Переключение разделов итоговых документов"
-          className="flex flex-wrap items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl"
+          className="flex flex-wrap items-center gap-1 p-1 bg-[#EDF2FA] dark:bg-slate-800 rounded-full"
         >
           {(
             [
-              { id: 'all', label: 'Все документы', icon: Layers },
+              { id: 'all', label: 'Все листы', icon: Layers },
               { id: 'email', label: 'Письмо клиенту', icon: MailCheck },
               { id: 'change-order', label: 'Доп. соглашение', icon: Scale },
               { id: 'json', label: 'JSON Схема', icon: Code2 },
@@ -122,9 +122,9 @@ export const DeliverablesView: React.FC<DeliverablesViewProps> = ({
                 role="tab"
                 aria-selected={active}
                 onClick={() => setActiveDeliverableTab(tab.id)}
-                className={`min-h-[36px] inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap ${
+                className={`min-h-[34px] inline-flex items-center gap-1.5 px-4 py-1 text-xs font-semibold rounded-full transition-all cursor-pointer whitespace-nowrap ${
                   active
-                    ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs'
+                    ? 'bg-white dark:bg-slate-900 text-indigo-700 dark:text-indigo-300 shadow-2xs'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
@@ -144,7 +144,7 @@ export const DeliverablesView: React.FC<DeliverablesViewProps> = ({
               'Часы, ставки и суммы в письме и Change Order обновлены.'
             );
           }}
-          className="min-h-[38px] inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors cursor-pointer whitespace-nowrap shrink-0"
+          className="min-h-[36px] inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-[#EDF2FA] dark:bg-slate-800 hover:bg-[#D3E3FD] dark:hover:bg-slate-700 rounded-full transition-colors cursor-pointer whitespace-nowrap shrink-0"
         >
           <RefreshCw className="w-3.5 h-3.5" />
           <span>Синхронизировать шаблоны с реестром</span>
@@ -161,21 +161,21 @@ export const DeliverablesView: React.FC<DeliverablesViewProps> = ({
             activeDeliverableTab === 'all' ? 'lg:grid-cols-2' : ''
           } gap-6 items-stretch animate-tab-fade`}
         >
-          {/* Email Draft Card */}
+          {/* Email Draft Google Docs Sheet */}
           {(activeDeliverableTab === 'all' ||
             activeDeliverableTab === 'email') && (
             <section
               id="email"
               aria-label="Дипломатичное письмо клиенту"
-              className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 sm:p-6 shadow-sm flex flex-col justify-between"
+              className="gdocs-sheet rounded-3xl p-6 sm:p-7 flex flex-col justify-between"
             >
               <div>
-                <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-200/80 dark:border-slate-800">
+                <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-100 dark:border-slate-800">
                   <div>
-                    <h2 className="text-base font-bold text-slate-900 dark:text-white">
-                      04. Дипломатичное письмо клиенту
+                    <h2 className="text-base font-semibold text-slate-900 dark:text-white">
+                      Лист 04. Дипломатичное письмо клиенту
                     </h2>
-                    <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                       Спокойное обоснование дополнительного бюджета и сроков без конфронтации.
                     </p>
                   </div>
@@ -190,7 +190,7 @@ export const DeliverablesView: React.FC<DeliverablesViewProps> = ({
                           'Письмо клиенту скопировано'
                         )
                       }
-                      className="min-h-[40px] inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-white bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 rounded-xl shadow-xs transition-all cursor-pointer"
+                      className="min-h-[38px] inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold text-white bg-slate-900 dark:bg-indigo-600 hover:bg-indigo-600 dark:hover:bg-indigo-500 rounded-full shadow-xs transition-all cursor-pointer"
                     >
                       {copiedKey === 'email' ? (
                         <>
@@ -220,7 +220,7 @@ export const DeliverablesView: React.FC<DeliverablesViewProps> = ({
                       type="text"
                       value={report.client_email_draft.subject}
                       onChange={(e) => onUpdateEmailSubject(e.target.value)}
-                      className="w-full min-h-[42px] px-3.5 py-2 text-xs font-semibold text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-800 focus:border-indigo-500 focus:outline-none"
+                      className="w-full min-h-[42px] px-4 py-2 text-xs font-semibold text-slate-900 dark:text-white bg-[#F8FAFD] dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700 rounded-2xl focus:bg-white dark:focus:bg-slate-800 focus:border-indigo-500 focus:outline-none"
                     />
                   </div>
 
@@ -236,7 +236,7 @@ export const DeliverablesView: React.FC<DeliverablesViewProps> = ({
                       rows={12}
                       value={report.client_email_draft.body}
                       onChange={(e) => onUpdateEmailBody(e.target.value)}
-                      className="w-full p-3.5 text-xs leading-relaxed text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-800 focus:border-indigo-500 focus:outline-none resize-y"
+                      className="w-full p-4 text-xs leading-relaxed text-slate-800 dark:text-slate-200 bg-[#F8FAFD] dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700 rounded-2xl focus:bg-white dark:focus:bg-slate-800 focus:border-indigo-500 focus:outline-none resize-y"
                     />
                   </div>
                 </div>
@@ -251,21 +251,21 @@ export const DeliverablesView: React.FC<DeliverablesViewProps> = ({
             </section>
           )}
 
-          {/* Change Order Legal Clause Card */}
+          {/* Change Order Legal Clause Google Docs Sheet */}
           {(activeDeliverableTab === 'all' ||
             activeDeliverableTab === 'change-order') && (
             <section
               id="change-order"
               aria-label="Дополнительное соглашение Change Order"
-              className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 sm:p-6 shadow-sm flex flex-col justify-between"
+              className="gdocs-sheet rounded-3xl p-6 sm:p-7 flex flex-col justify-between"
             >
               <div>
-                <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-200/80 dark:border-slate-800">
+                <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-100 dark:border-slate-800">
                   <div>
-                    <h2 className="text-base font-bold text-slate-900 dark:text-white">
-                      05. Текст Дополнительного соглашения (Change Order)
+                    <h2 className="text-base font-semibold text-slate-900 dark:text-white">
+                      Лист 05. Дополнительное соглашение (Change Order)
                     </h2>
-                    <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                       Формальная юридическая формулировка для Приложения к Договору.
                     </p>
                   </div>
@@ -280,7 +280,7 @@ export const DeliverablesView: React.FC<DeliverablesViewProps> = ({
                           'Текст Change Order скопирован'
                         )
                       }
-                      className="min-h-[40px] inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors cursor-pointer"
+                      className="min-h-[38px] inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-[#EDF2FA] dark:bg-slate-800 hover:bg-[#D3E3FD] dark:hover:bg-slate-700 rounded-full transition-colors cursor-pointer"
                     >
                       {copiedKey === 'change-order' ? (
                         <>
@@ -297,10 +297,10 @@ export const DeliverablesView: React.FC<DeliverablesViewProps> = ({
                     <button
                       type="button"
                       onClick={onOpenPrintModal}
-                      className="min-h-[40px] inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-white bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 rounded-xl shadow-xs transition-all cursor-pointer"
+                      className="min-h-[38px] inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold text-white bg-slate-900 dark:bg-indigo-600 hover:bg-indigo-600 dark:hover:bg-indigo-500 rounded-full shadow-xs transition-all cursor-pointer"
                     >
                       <Printer className="w-3.5 h-3.5" />
-                      <span>Экспорт Change Order в PDF / Печать</span>
+                      <span>Экспорт PDF / Печать</span>
                     </button>
                   </div>
                 </div>
@@ -317,7 +317,7 @@ export const DeliverablesView: React.FC<DeliverablesViewProps> = ({
                     rows={15}
                     value={report.change_order_summary}
                     onChange={(e) => onUpdateChangeOrder(e.target.value)}
-                    className="w-full p-3.5 text-xs leading-relaxed font-mono text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-800 focus:border-indigo-500 focus:outline-none resize-y"
+                    className="w-full p-4 text-xs leading-relaxed font-mono text-slate-800 dark:text-slate-200 bg-[#F8FAFD] dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700 rounded-2xl focus:bg-white dark:focus:bg-slate-800 focus:border-indigo-500 focus:outline-none resize-y"
                   />
                 </div>
               </div>
@@ -338,14 +338,14 @@ export const DeliverablesView: React.FC<DeliverablesViewProps> = ({
         <section
           id="json"
           aria-label="Структурированный JSON-отчет по схеме"
-          className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 sm:p-6 shadow-sm animate-tab-fade"
+          className="gdocs-sheet rounded-3xl p-6 sm:p-7 animate-tab-fade"
         >
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-slate-200/80 dark:border-slate-800">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
             <div>
-              <h2 className="text-base font-bold text-slate-900 dark:text-white">
-                06. Структурированный JSON-отчет аудита
+              <h2 className="text-base font-semibold text-slate-900 dark:text-white">
+                Лист 06. Структурированный JSON-отчет аудита
               </h2>
-              <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                 Строгое соответствие целевой JSON-схеме для автоматизированного документооборота и интеграций.
               </p>
             </div>
@@ -360,7 +360,7 @@ export const DeliverablesView: React.FC<DeliverablesViewProps> = ({
                     'application/json;charset=utf-8'
                   )
                 }
-                className="min-h-[40px] inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors cursor-pointer"
+                className="min-h-[38px] inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-[#EDF2FA] dark:bg-slate-800 hover:bg-[#D3E3FD] dark:hover:bg-slate-700 rounded-full transition-colors cursor-pointer"
               >
                 <Download className="w-3.5 h-3.5" />
                 <span>Скачать .json</span>
@@ -374,7 +374,7 @@ export const DeliverablesView: React.FC<DeliverablesViewProps> = ({
                     'JSON-схема отчета скопирована'
                   )
                 }
-                className="min-h-[40px] inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-white bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 rounded-xl shadow-xs transition-all cursor-pointer"
+                className="min-h-[38px] inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold text-white bg-slate-900 dark:bg-indigo-600 hover:bg-indigo-600 dark:hover:bg-indigo-500 rounded-full shadow-xs transition-all cursor-pointer"
               >
                 {copiedKey === 'json' ? (
                   <>
@@ -393,7 +393,7 @@ export const DeliverablesView: React.FC<DeliverablesViewProps> = ({
 
           <pre
             data-testid="json-schema-output"
-            className="mt-4 p-4 bg-slate-950 text-slate-100 rounded-xl text-xs font-mono leading-relaxed overflow-x-auto max-h-[380px] border border-slate-800"
+            className="mt-4 p-5 bg-slate-950 text-slate-100 rounded-2xl text-xs font-mono leading-relaxed overflow-x-auto max-h-[380px] border border-slate-800"
           >
             {strictJsonString}
           </pre>

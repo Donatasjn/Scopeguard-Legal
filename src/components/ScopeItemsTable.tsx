@@ -122,15 +122,15 @@ export const ScopeItemsTable: React.FC<ScopeItemsTableProps> = ({
       {/* Out of Scope Register */}
       <section
         aria-label="Реестр новых хотелок вне ТЗ"
-        className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 sm:p-6 shadow-sm"
+        className="gdocs-sheet rounded-3xl p-6 sm:p-7"
       >
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-slate-200/80 dark:border-slate-800">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
           <div>
-            <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
-              02. Выявленный Scope Creep: реестр доработок вне ТЗ
+            <h2 className="text-base sm:text-lg font-semibold text-slate-900 dark:text-white">
+              Лист 02. Выявленный Scope Creep: реестр доработок вне ТЗ
             </h2>
-            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-0.5">
-              Интерактивный превью-лист: меняйте часы и критичность — смета и Change Order пересчитываются мгновенно.
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+              Интерактивный лист: меняйте часы и критичность — смета и Change Order пересчитываются мгновенно.
             </p>
           </div>
 
@@ -141,7 +141,7 @@ export const ScopeItemsTable: React.FC<ScopeItemsTableProps> = ({
               setAddFormError(null);
               setIsAddModalOpen(true);
             }}
-            className="min-h-[44px] inline-flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 rounded-xl shadow-xs transition-all whitespace-nowrap shrink-0 cursor-pointer"
+            className="min-h-[42px] inline-flex items-center justify-center gap-1.5 px-5 py-2 text-xs font-semibold text-white bg-slate-900 dark:bg-indigo-600 hover:bg-indigo-600 dark:hover:bg-indigo-500 rounded-full shadow-xs transition-all whitespace-nowrap shrink-0 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>+ Добавить доработку</span>
@@ -150,11 +150,11 @@ export const ScopeItemsTable: React.FC<ScopeItemsTableProps> = ({
 
         {/* Filter & Search Bar */}
         <div className="mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          {/* Segmented filter control */}
+          {/* Pill filter control */}
           <div
             role="group"
             aria-label="Фильтр по критичности"
-            className="flex flex-wrap items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl"
+            className="flex flex-wrap items-center gap-1 p-1 bg-[#EDF2FA] dark:bg-slate-800 rounded-full"
           >
             {(
               [
@@ -168,9 +168,9 @@ export const ScopeItemsTable: React.FC<ScopeItemsTableProps> = ({
                 key={tab.id}
                 type="button"
                 onClick={() => setSeverityFilter(tab.id)}
-                className={`min-h-[36px] px-3 py-1.5 text-xs font-semibold rounded-lg transition-all whitespace-nowrap shrink-0 cursor-pointer ${
+                className={`min-h-[34px] px-3.5 py-1 text-xs font-semibold rounded-full transition-all whitespace-nowrap shrink-0 cursor-pointer ${
                   severityFilter === tab.id
-                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-2xs'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
@@ -180,14 +180,14 @@ export const ScopeItemsTable: React.FC<ScopeItemsTableProps> = ({
           </div>
 
           <div className="relative flex-1 max-w-xs">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="search"
               aria-label="Поиск по реестру доработок"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Поиск по цитате или ТЗ..."
-              className="w-full min-h-[40px] pl-9 pr-3 py-1.5 text-xs bg-slate-50 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-800 focus:border-indigo-500 focus:outline-none transition-colors"
+              className="w-full min-h-[38px] pl-9 pr-4 py-1.5 text-xs bg-[#F8FAFD] dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700 rounded-full text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-800 focus:border-indigo-500 focus:outline-none transition-colors"
             />
           </div>
         </div>
@@ -432,18 +432,18 @@ export const ScopeItemsTable: React.FC<ScopeItemsTableProps> = ({
       {/* Confirmed In-Scope Items Section */}
       <section
         aria-label="Подтвержденные пункты в рамках ТЗ"
-        className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 sm:p-6 shadow-sm"
+        className="gdocs-sheet rounded-3xl p-6 sm:p-7"
       >
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-4 border-b border-slate-200/80 dark:border-slate-800">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-4 border-b border-slate-100 dark:border-slate-800">
           <div>
-            <h2 className="text-base font-bold text-slate-900 dark:text-white">
-              03. Подтверждено в рамках текущего ТЗ и базовой сметы
+            <h2 className="text-base font-semibold text-slate-900 dark:text-white">
+              Лист 03. Подтверждено в рамках текущего ТЗ и базовой сметы
             </h2>
-            <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
               Задачи, которые обсуждались на созвоне и уже входят в базовый договор.
             </p>
           </div>
-          <span className="text-xs font-mono tabular-nums text-slate-500 dark:text-slate-400">
+          <span className="px-3 py-1 rounded-full bg-[#EDF2FA] dark:bg-slate-800 text-xs font-mono tabular-nums text-slate-600 dark:text-slate-300">
             Пунктов в ТЗ: {inScopeItems.length}
           </span>
         </div>
@@ -477,18 +477,18 @@ export const ScopeItemsTable: React.FC<ScopeItemsTableProps> = ({
             value={newInScopeText}
             onChange={(e) => setNewInScopeText(e.target.value)}
             placeholder="Добавить подтвержденный пункт из текущего ТЗ..."
-            className="flex-1 min-h-[44px] px-3.5 py-2 text-xs bg-slate-50 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-800 focus:border-indigo-500 focus:outline-none"
+            className="flex-1 min-h-[42px] px-4 py-2 text-xs bg-[#F8FAFD] dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700 rounded-full text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-800 focus:border-indigo-500 focus:outline-none"
           />
           <button
             type="submit"
-            className="min-h-[44px] px-4 py-2 text-xs font-semibold text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl whitespace-nowrap shrink-0 cursor-pointer transition-colors"
+            className="min-h-[42px] px-5 py-2 text-xs font-semibold text-slate-900 dark:text-white bg-[#EDF2FA] dark:bg-slate-800 hover:bg-[#D3E3FD] dark:hover:bg-slate-700 rounded-full whitespace-nowrap shrink-0 cursor-pointer transition-colors"
           >
             Добавить пункт ТЗ
           </button>
         </form>
       </section>
 
-      {/* ANIMATED MODAL FOR "+ ДОБАВИТЬ ДОРАБОТКУ" */}
+      {/* GOOGLE MATERIAL 3 DIALOG FOR "+ ДОБАВИТЬ ДОРАБОТКУ" (rounded-3xl, p-8, backdrop blur, spring animation) */}
       {isAddModalOpen && (
         <div
           role="dialog"
@@ -496,20 +496,20 @@ export const ScopeItemsTable: React.FC<ScopeItemsTableProps> = ({
           aria-labelledby="add-item-modal-title"
           data-testid="add-item-modal"
           onClick={() => setIsAddModalOpen(false)}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm overflow-y-auto animate-modal-backdrop"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/45 backdrop-blur-md overflow-y-auto animate-modal-backdrop"
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl max-w-xl w-full p-6 sm:p-7 shadow-xl animate-modal-content space-y-5"
+            className="bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800 rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl animate-modal-content space-y-5"
           >
-            <div className="flex items-start justify-between gap-3 pb-4 border-b border-slate-200/80 dark:border-slate-800">
+            <div className="flex items-start justify-between gap-3 pb-4 border-b border-slate-100 dark:border-slate-800">
               <div>
                 <div className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">
                   Фиксация Scope Creep в реестре
                 </div>
                 <h3
                   id="add-item-modal-title"
-                  className="text-lg font-bold text-slate-900 dark:text-white mt-0.5"
+                  className="text-lg sm:text-xl font-semibold text-slate-900 dark:text-white mt-0.5"
                 >
                   Добавить новую доработку вне ТЗ
                 </h3>
@@ -521,7 +521,7 @@ export const ScopeItemsTable: React.FC<ScopeItemsTableProps> = ({
                 type="button"
                 onClick={() => setIsAddModalOpen(false)}
                 aria-label="Закрыть окно добавления доработки"
-                className="min-h-[40px] min-w-[40px] inline-flex items-center justify-center p-2 text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                className="min-h-[40px] min-w-[40px] inline-flex items-center justify-center p-2 text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -541,7 +541,7 @@ export const ScopeItemsTable: React.FC<ScopeItemsTableProps> = ({
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
                   placeholder="Напр.: Двусторонняя синхронизация с 1С"
-                  className="w-full min-h-[44px] px-3.5 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-900 focus:border-indigo-500 focus:outline-none"
+                  className="w-full min-h-[44px] px-4 py-2 text-xs bg-[#F8FAFD] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-900 focus:border-indigo-500 focus:outline-none"
                 />
               </div>
 
@@ -582,10 +582,10 @@ export const ScopeItemsTable: React.FC<ScopeItemsTableProps> = ({
                         key={sev.id}
                         type="button"
                         onClick={() => setNewSeverity(sev.id)}
-                        className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                        className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
                           active
                             ? sev.activeClass
-                            : 'border-slate-200 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-800/50 text-slate-700 dark:text-slate-300 hover:border-indigo-400'
+                            : 'border-slate-200 dark:border-slate-700 bg-[#F8FAFD] dark:bg-slate-800/50 text-slate-700 dark:text-slate-300 hover:border-indigo-400'
                         }`}
                       >
                         <div className="text-xs font-bold">{sev.label}</div>
@@ -614,7 +614,7 @@ export const ScopeItemsTable: React.FC<ScopeItemsTableProps> = ({
                     max={40}
                     value={newHours}
                     onChange={(e) => setNewHours(Number(e.target.value))}
-                    className="w-full min-h-[44px] px-3.5 py-2 text-sm font-mono tabular-nums font-bold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:border-indigo-500 focus:outline-none"
+                    className="w-full min-h-[44px] px-4 py-2 text-sm font-mono tabular-nums font-bold bg-[#F8FAFD] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-white focus:border-indigo-500 focus:outline-none"
                   />
                   <div className="flex items-center gap-1.5">
                     {HOUR_PRESETS.map((presetH) => (
@@ -622,10 +622,10 @@ export const ScopeItemsTable: React.FC<ScopeItemsTableProps> = ({
                         key={presetH}
                         type="button"
                         onClick={() => setNewHours(presetH)}
-                        className={`px-2 py-1 text-[11px] font-mono tabular-nums rounded-lg border transition-colors cursor-pointer ${
+                        className={`px-2.5 py-1 text-[11px] font-mono tabular-nums rounded-full border transition-colors cursor-pointer ${
                           safeNewHours === presetH
                             ? 'bg-indigo-600 text-white border-indigo-600 font-semibold'
-                            : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-indigo-400'
+                            : 'bg-[#EDF2FA] dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-transparent hover:border-indigo-400'
                         }`}
                       >
                         {presetH}ч
@@ -637,7 +637,7 @@ export const ScopeItemsTable: React.FC<ScopeItemsTableProps> = ({
                 {/* Live Cost & Deadline Shift Calculation Box */}
                 <div
                   data-testid="live-item-cost-preview"
-                  className="p-3.5 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200/80 dark:border-indigo-900/60 flex flex-col justify-between"
+                  className="p-4 rounded-2xl bg-[#F3F6FC] dark:bg-indigo-950/40 border border-indigo-200/70 dark:border-indigo-900/60 flex flex-col justify-between"
                 >
                   <div className="flex items-center gap-1.5 text-[11px] font-semibold text-indigo-700 dark:text-indigo-300">
                     <Calculator className="w-3.5 h-3.5" />
@@ -667,7 +667,7 @@ export const ScopeItemsTable: React.FC<ScopeItemsTableProps> = ({
                   value={newQuote}
                   onChange={(e) => setNewQuote(e.target.value)}
                   placeholder="[18:20] «Давайте еще кнопку выгрузки презентации в PDF»"
-                  className="w-full min-h-[44px] px-3.5 py-2 text-xs font-mono bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-900 focus:border-indigo-500 focus:outline-none"
+                  className="w-full min-h-[44px] px-4 py-2 text-xs font-mono bg-[#F8FAFD] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-900 focus:border-indigo-500 focus:outline-none"
                 />
               </div>
 
@@ -684,7 +684,7 @@ export const ScopeItemsTable: React.FC<ScopeItemsTableProps> = ({
                   value={newReason}
                   onChange={(e) => setNewReason(e.target.value)}
                   placeholder="В п. 4.1 ТЗ предусмотрен только просмотр в веб-интерфейсе."
-                  className="w-full min-h-[44px] px-3.5 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-900 focus:border-indigo-500 focus:outline-none"
+                  className="w-full min-h-[44px] px-4 py-2 text-xs bg-[#F8FAFD] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-900 focus:border-indigo-500 focus:outline-none"
                 />
               </div>
 
@@ -701,13 +701,13 @@ export const ScopeItemsTable: React.FC<ScopeItemsTableProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsAddModalOpen(false)}
-                  className="min-h-[44px] px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white rounded-xl cursor-pointer"
+                  className="min-h-[42px] px-5 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full cursor-pointer"
                 >
                   Отмена
                 </button>
                 <button
                   type="submit"
-                  className="min-h-[44px] px-5 py-2.5 text-xs font-semibold text-white bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 rounded-xl shadow-sm transition-all cursor-pointer"
+                  className="min-h-[42px] px-6 py-2.5 text-xs font-semibold text-white bg-slate-900 dark:bg-indigo-600 hover:bg-indigo-600 dark:hover:bg-indigo-500 rounded-full shadow-sm transition-all cursor-pointer"
                 >
                   Зафиксировать в реестре
                 </button>

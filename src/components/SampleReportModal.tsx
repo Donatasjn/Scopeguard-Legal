@@ -72,14 +72,14 @@ export const SampleReportModal: React.FC<SampleReportModalProps> = ({
       aria-labelledby="sample-report-modal-title"
       data-testid="sample-report-modal"
       onClick={onClose}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm overflow-y-auto animate-modal-backdrop"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/45 backdrop-blur-md overflow-y-auto animate-modal-backdrop"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl max-w-4xl w-full p-5 sm:p-7 shadow-xl my-6 animate-modal-content space-y-5"
+        className="bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800 rounded-3xl max-w-4xl w-full p-6 sm:p-8 shadow-2xl my-6 animate-modal-content space-y-5"
       >
         {/* Header */}
-        <div className="flex items-start justify-between gap-4 pb-4 border-b border-slate-200/80 dark:border-slate-800">
+        <div className="flex items-start justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-start gap-3">
             <BrandLogoIcon className="w-8 h-8 shrink-0 mt-0.5" />
             <div>
@@ -88,11 +88,11 @@ export const SampleReportModal: React.FC<SampleReportModalProps> = ({
               </div>
               <h2
                 id="sample-report-modal-title"
-                className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white mt-0.5"
+                className="text-lg sm:text-xl font-semibold text-slate-900 dark:text-white mt-0.5"
               >
                 Пример реального отчета ScopeGuard Legal
               </h2>
-              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-0.5">
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
                 Оцените детализацию найденных расхождений с ТЗ, расчет часов и готовые юридические формулировки до запуска проверки.
               </p>
             </div>
@@ -102,14 +102,14 @@ export const SampleReportModal: React.FC<SampleReportModalProps> = ({
             type="button"
             onClick={onClose}
             aria-label="Закрыть превью отчета"
-            className="min-h-[40px] min-w-[40px] inline-flex items-center justify-center p-2 text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer shrink-0"
+            className="min-h-[40px] min-w-[40px] inline-flex items-center justify-center p-2 text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Case Switcher + Summary Strip */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50 dark:bg-slate-800/60 p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#F8FAFD] dark:bg-slate-800/60 p-3.5 rounded-2xl border border-slate-200/70 dark:border-slate-800">
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 mr-1">
               Кейс:
@@ -119,9 +119,9 @@ export const SampleReportModal: React.FC<SampleReportModalProps> = ({
                 key={preset.id}
                 type="button"
                 onClick={() => setSelectedPresetIndex(idx)}
-                className={`min-h-[34px] px-3 py-1 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+                className={`min-h-[34px] px-3.5 py-1 text-xs font-semibold rounded-full transition-all cursor-pointer ${
                   selectedPresetIndex === idx
-                    ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-xs'
+                    ? 'bg-[#C2E7FF] text-[#001D35] dark:bg-indigo-600 dark:text-white shadow-2xs'
                     : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700 hover:border-indigo-400'
                 }`}
               >
@@ -147,7 +147,7 @@ export const SampleReportModal: React.FC<SampleReportModalProps> = ({
         </div>
 
         {/* Sub-navigation inside Preview Modal */}
-        <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl w-fit">
+        <div className="flex items-center gap-1 p-1 bg-[#EDF2FA] dark:bg-slate-800 rounded-full w-fit">
           {(
             [
               {
@@ -174,9 +174,9 @@ export const SampleReportModal: React.FC<SampleReportModalProps> = ({
                 key={tab.id}
                 type="button"
                 onClick={() => setActivePreviewTab(tab.id)}
-                className={`min-h-[36px] inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+                className={`min-h-[34px] inline-flex items-center gap-1.5 px-4 py-1 text-xs font-semibold rounded-full transition-all cursor-pointer ${
                   active
-                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-2xs'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
@@ -277,7 +277,7 @@ export const SampleReportModal: React.FC<SampleReportModalProps> = ({
         </div>
 
         {/* Footer Actions */}
-        <div className="pt-4 border-t border-slate-200/80 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
             <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
             <span>
@@ -289,7 +289,7 @@ export const SampleReportModal: React.FC<SampleReportModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="min-h-[42px] px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white rounded-xl transition-colors cursor-pointer"
+              className="min-h-[42px] px-5 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors cursor-pointer"
             >
               Закрыть
             </button>
@@ -300,7 +300,7 @@ export const SampleReportModal: React.FC<SampleReportModalProps> = ({
                 onLoadPresetInWorkspace(activePreset);
                 onClose();
               }}
-              className="min-h-[42px] inline-flex items-center gap-2 px-5 py-2.5 text-xs font-semibold text-white bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 rounded-xl shadow-sm transition-all cursor-pointer whitespace-nowrap"
+              className="min-h-[42px] inline-flex items-center gap-2 px-6 py-2.5 text-xs font-semibold text-white bg-slate-900 dark:bg-indigo-600 hover:bg-indigo-600 dark:hover:bg-indigo-500 rounded-full shadow-sm transition-all cursor-pointer whitespace-nowrap"
             >
               <span>Открыть этот отчет в кабинете</span>
               <ArrowRight className="w-3.5 h-3.5" />

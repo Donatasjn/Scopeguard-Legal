@@ -131,23 +131,23 @@ export const SourceInputPanel: React.FC<SourceInputPanelProps> = ({
   return (
     <section
       aria-label="Исходные документы для сверки"
-      className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 sm:p-6"
+      className="gdocs-sheet rounded-3xl p-6 sm:p-7"
     >
-      <div className="flex flex-col gap-3 pb-4 border-b border-slate-200 dark:border-slate-800">
+      <div className="flex flex-col gap-3 pb-4 border-b border-slate-100 dark:border-slate-800">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
-              01. Загрузка ТЗ и записи встречи
+            <h2 className="text-base sm:text-lg font-semibold text-slate-900 dark:text-white">
+              Лист 01. Исходное ТЗ и запись встречи
             </h2>
-            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-0.5">
-              Прикрепите файлы с устройства или вставьте текст для автоматического поиска Scope Creep.
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+              Прикрепите файлы или вставьте текст для автоматического поиска Scope Creep.
             </p>
           </div>
           <button
             type="button"
             onClick={onClearInputs}
             data-testid="clear-inputs-btn"
-            className="min-h-[40px] px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-800 rounded-xl transition-colors whitespace-nowrap shrink-0 flex items-center gap-1.5 cursor-pointer"
+            className="min-h-[38px] px-3.5 py-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-[#EDF2FA] dark:bg-slate-800 hover:bg-[#D3E3FD] rounded-full transition-colors whitespace-nowrap shrink-0 flex items-center gap-1.5 cursor-pointer"
             title="Очистить поля и прикрепленные файлы"
           >
             <RotateCcw className="w-3.5 h-3.5" />
@@ -155,11 +155,11 @@ export const SourceInputPanel: React.FC<SourceInputPanelProps> = ({
           </button>
         </div>
 
-        {/* Demo Cases Bar */}
+        {/* Demo Cases Pill Bar */}
         <div className="flex flex-wrap items-center gap-1.5 pt-1">
           <span className="inline-flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 mr-1">
             <FolderOpen className="w-3.5 h-3.5" />
-            <span>Шаблоны:</span>
+            <span>Примеры:</span>
           </span>
           {AUDIT_PRESETS.map((preset) => {
             const active =
@@ -169,10 +169,10 @@ export const SourceInputPanel: React.FC<SourceInputPanelProps> = ({
                 key={preset.id}
                 type="button"
                 onClick={() => onSelectPreset(preset)}
-                className={`min-h-[36px] px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+                className={`min-h-[34px] px-3.5 py-1 text-xs font-semibold rounded-full transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
                   active
-                    ? 'bg-indigo-600 text-white shadow-xs'
-                    : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                    ? 'bg-[#C2E7FF] text-[#001D35] dark:bg-indigo-600 dark:text-white shadow-2xs'
+                    : 'bg-[#F8FAFD] dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-[#EDF2FA] dark:hover:bg-slate-700'
                 }`}
               >
                 {preset.label}
@@ -198,7 +198,7 @@ export const SourceInputPanel: React.FC<SourceInputPanelProps> = ({
               value={projectName}
               onChange={(e) => onChangeProjectName(e.target.value)}
               placeholder="Например: B2B-портал АгроСнаб"
-              className="w-full min-h-[44px] px-3.5 py-2 text-sm bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-800 focus:border-indigo-500 focus:outline-none transition-colors"
+              className="w-full min-h-[44px] px-4 py-2 text-sm bg-[#F8FAFD] dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-800 focus:border-indigo-500 focus:outline-none transition-colors"
             />
           </div>
 
@@ -215,7 +215,7 @@ export const SourceInputPanel: React.FC<SourceInputPanelProps> = ({
                 type="date"
                 value={auditDate}
                 onChange={(e) => onChangeAuditDate(e.target.value)}
-                className="w-full min-h-[44px] px-3.5 py-2 text-sm font-mono tabular-nums bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-800 focus:border-indigo-500 focus:outline-none transition-colors"
+                className="w-full min-h-[44px] px-4 py-2 text-sm font-mono tabular-nums bg-[#F8FAFD] dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-800 focus:border-indigo-500 focus:outline-none transition-colors"
               />
             </div>
 
@@ -234,7 +234,7 @@ export const SourceInputPanel: React.FC<SourceInputPanelProps> = ({
                 step={currency === 'USD' || currency === 'EUR' ? 5 : 100}
                 value={hourlyRate}
                 onChange={(e) => onChangeHourlyRate(Number(e.target.value))}
-                className="w-full min-h-[44px] px-3.5 py-2 text-sm font-mono tabular-nums bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-800 focus:border-indigo-500 focus:outline-none transition-colors"
+                className="w-full min-h-[44px] px-4 py-2 text-sm font-mono tabular-nums bg-[#F8FAFD] dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-800 focus:border-indigo-500 focus:outline-none transition-colors"
               />
             </div>
           </div>
@@ -533,7 +533,7 @@ export const SourceInputPanel: React.FC<SourceInputPanelProps> = ({
             type="submit"
             data-testid="submit-audit-btn"
             disabled={isAnalyzing}
-            className="w-full min-h-[48px] inline-flex items-center justify-center gap-2 px-5 py-3 text-xs sm:text-sm font-bold text-white bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 disabled:opacity-60 rounded-xl transition-all cursor-pointer shadow-sm"
+            className="w-full min-h-[48px] inline-flex items-center justify-center gap-2 px-6 py-3 text-xs sm:text-sm font-semibold text-white bg-slate-900 dark:bg-indigo-600 hover:bg-indigo-600 dark:hover:bg-indigo-500 disabled:opacity-60 rounded-full transition-all cursor-pointer shadow-sm"
           >
             <Play className="w-4 h-4" />
             <span>

@@ -120,12 +120,12 @@ export const PricingModal: React.FC<PricingModalProps> = ({
       onClick={(e) => e.stopPropagation()}
       className={
         inlineMode
-          ? 'bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 sm:p-8 shadow-sm animate-tab-fade'
-          : 'bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl max-w-4xl w-full p-6 sm:p-8 shadow-xl my-8 animate-modal-content'
+          ? 'gdocs-sheet rounded-3xl p-6 sm:p-8 animate-tab-fade'
+          : 'bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800 rounded-3xl max-w-4xl w-full p-6 sm:p-8 shadow-2xl my-8 animate-modal-content'
       }
     >
       {/* Header with Currency Switcher */}
-      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 pb-5 border-b border-slate-200 dark:border-slate-800">
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 pb-5 border-b border-slate-100 dark:border-slate-800">
         <div>
           {quotaExhaustedReason && (
             <p className="text-xs font-semibold text-amber-600 dark:text-amber-400 mb-1">
@@ -134,7 +134,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
           )}
           <h2
             id="pricing-modal-title"
-            className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white"
+            className="text-xl sm:text-2xl font-semibold text-slate-900 dark:text-white"
           >
             {selectedPlan
               ? `Оформление подписки: тариф ${
@@ -144,7 +144,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                 }`
               : 'Тарифные планы и лимиты проверок'}
           </h2>
-          <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
             {selectedPlan
               ? `Валюта расчетов: ${CURRENCY_CONFIGS[currency].label}. Доступны локальные способы оплаты.`
               : freemiumState
@@ -154,20 +154,20 @@ export const PricingModal: React.FC<PricingModalProps> = ({
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          {/* Currency Segmented Control */}
+          {/* Currency Pill Control */}
           <div
             role="group"
             aria-label="Валюта тарифов"
-            className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl"
+            className="flex items-center gap-1 p-1 bg-[#EDF2FA] dark:bg-slate-800 rounded-full"
           >
             {CURRENCY_ORDER.map((code) => (
               <button
                 key={code}
                 type="button"
                 onClick={() => onChangeCurrency(code)}
-                className={`min-h-[36px] px-2.5 py-1 text-xs font-mono font-semibold rounded-lg transition-colors cursor-pointer ${
+                className={`min-h-[34px] px-3 py-1 text-xs font-mono font-semibold rounded-full transition-colors cursor-pointer ${
                   currency === code
-                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-2xs'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
@@ -184,7 +184,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                 onClose();
               }}
               aria-label="Закрыть окно тарифов"
-              className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center p-2 text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-xl transition-colors cursor-pointer"
+              className="min-h-[40px] min-w-[40px] inline-flex items-center justify-center p-2 text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
@@ -256,7 +256,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setSelectedPlan('freelance')}
-                  className="w-full min-h-[44px] py-2.5 px-4 text-xs font-semibold text-white bg-slate-900 dark:bg-slate-700 hover:bg-slate-800 dark:hover:bg-slate-600 rounded-xl transition-colors cursor-pointer"
+                  className="w-full min-h-[44px] py-2.5 px-5 text-xs font-semibold text-white bg-slate-900 dark:bg-slate-700 hover:bg-slate-800 dark:hover:bg-slate-600 rounded-full transition-colors cursor-pointer"
                 >
                   {currentTier === 'freelance'
                     ? 'Продлить тариф Freelance'
@@ -266,7 +266,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
             </div>
 
             {/* Agency Plan */}
-            <div className="border-2 border-indigo-600 dark:border-indigo-500 rounded-2xl p-6 flex flex-col justify-between bg-white dark:bg-slate-900">
+            <div className="border-2 border-indigo-600 dark:border-indigo-500 rounded-3xl p-6 flex flex-col justify-between bg-white dark:bg-slate-900">
               <div>
                 <div className="flex items-baseline justify-between gap-2">
                   <h3 className="text-lg font-bold text-slate-900 dark:text-white">
@@ -325,7 +325,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setSelectedPlan('agency')}
-                  className="w-full min-h-[44px] py-2.5 px-4 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 rounded-xl transition-colors cursor-pointer"
+                  className="w-full min-h-[44px] py-2.5 px-5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 rounded-full transition-colors cursor-pointer"
                 >
                   {currentTier === 'agency'
                     ? 'Тариф Agency активен (Обновить)'
@@ -576,7 +576,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
         setSelectedPlan(null);
         onClose();
       }}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm overflow-y-auto animate-modal-backdrop"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/45 backdrop-blur-md overflow-y-auto animate-modal-backdrop"
     >
       {innerContent}
     </div>

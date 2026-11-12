@@ -84,14 +84,14 @@ export const AuditHistoryView: React.FC<AuditHistoryViewProps> = ({
       {/* Header & Aggregate Portfolio Metrics */}
       <section
         aria-label="Сводка библиотеки работ"
-        className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 sm:p-6"
+        className="gdocs-sheet rounded-3xl p-6 sm:p-7"
       >
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 pb-5 border-b border-slate-200 dark:border-slate-800">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 pb-5 border-b border-slate-100 dark:border-slate-800">
           <div>
             <div className="text-xs text-slate-500 dark:text-slate-400">
               Архив проектных сверок и дополнительных соглашений
             </div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white mt-1 text-balance">
+            <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-slate-900 dark:text-white mt-1 text-balance">
               Библиотека работ и история аудитов
             </h1>
           </div>
@@ -100,7 +100,7 @@ export const AuditHistoryView: React.FC<AuditHistoryViewProps> = ({
             <button
               type="button"
               onClick={onRestoreSeedHistory}
-              className="min-h-[44px] inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors cursor-pointer whitespace-nowrap shrink-0"
+              className="min-h-[40px] inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-[#EDF2FA] dark:bg-slate-800 hover:bg-[#D3E3FD] dark:hover:bg-slate-700 rounded-full transition-colors cursor-pointer whitespace-nowrap shrink-0"
             >
               <RotateCcw className="w-3.5 h-3.5" />
               <span>Восстановить демо-архив</span>
@@ -108,7 +108,7 @@ export const AuditHistoryView: React.FC<AuditHistoryViewProps> = ({
             <button
               type="button"
               onClick={onStartNewAudit}
-              className="min-h-[44px] inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 rounded-xl transition-colors cursor-pointer whitespace-nowrap shrink-0"
+              className="min-h-[40px] inline-flex items-center gap-1.5 px-5 py-2 text-xs font-semibold text-white bg-slate-900 dark:bg-indigo-600 hover:bg-indigo-600 dark:hover:bg-indigo-500 rounded-full transition-colors cursor-pointer whitespace-nowrap shrink-0"
             >
               <PlusCircle className="w-4 h-4" />
               <span>Новый аудит ТЗ</span>
@@ -162,12 +162,12 @@ export const AuditHistoryView: React.FC<AuditHistoryViewProps> = ({
       {/* Search & Date Filter Controls */}
       <section
         aria-label="Фильтрация и список сохраненных аудитов"
-        className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 sm:p-6 space-y-5"
+        className="gdocs-sheet rounded-3xl p-6 sm:p-7 space-y-5"
       >
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
           {/* Search by project name */}
           <div className="relative flex-1">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <Search className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="search"
               data-testid="history-search-input"
@@ -175,7 +175,7 @@ export const AuditHistoryView: React.FC<AuditHistoryViewProps> = ({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Поиск по названию проекта, номеру договора или доработке..."
-              className="w-full min-h-[44px] pl-10 pr-4 py-2 text-xs sm:text-sm bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-800 focus:border-indigo-500 focus:outline-none transition-colors"
+              className="w-full min-h-[42px] pl-10 pr-4 py-2 text-xs sm:text-sm bg-[#F8FAFD] dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700 rounded-full text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-800 focus:border-indigo-500 focus:outline-none transition-colors"
             />
           </div>
 
@@ -188,7 +188,7 @@ export const AuditHistoryView: React.FC<AuditHistoryViewProps> = ({
                 aria-label="Фильтр по дате аудита"
                 value={dateFilter}
                 onChange={(e) => setDateFilter(e.target.value)}
-                className="min-h-[44px] px-3 py-2 text-xs font-mono font-semibold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 focus:border-indigo-500 focus:outline-none cursor-pointer"
+                className="min-h-[42px] px-4 py-2 text-xs font-mono font-semibold bg-[#EDF2FA] dark:bg-slate-800 border border-transparent rounded-full text-slate-800 dark:text-slate-100 focus:border-indigo-500 focus:outline-none cursor-pointer"
               >
                 <option value="all">Все даты ({entries.length})</option>
                 {availableDates.map((dateStr) => (

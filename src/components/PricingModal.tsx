@@ -1,6 +1,28 @@
 import React, { useEffect, useState } from 'react';
-import { Check, CreditCard, ShieldCheck, Sparkles, X } from 'lucide-react';
+import {
+  Check,
+  Code2,
+  Copy,
+  CreditCard,
+  Database,
+  ExternalLink,
+  Loader2,
+  Lock,
+  ShieldCheck,
+  Sparkles,
+  Webhook,
+  X,
+} from 'lucide-react';
 import { useI18n } from '../lib/i18n';
+import {
+  CREATE_CHECKOUT_API_URL,
+  PAYMENT_WEBHOOK_API_URL,
+  SUPABASE_PAYMENTS_SQL_SCRIPT,
+  YOOKASSA_TARIFF_PRICES_RUB,
+  createYooKassaCheckoutSession,
+  type PaidTariffId,
+} from '../lib/payments';
+import { type UserProfile } from '../lib/supabase';
 import {
   CURRENCY_CONFIGS,
   formatQuotaBadgeText,
@@ -17,6 +39,7 @@ interface PricingModalProps {
   onClose: () => void;
   currentTier: SubscriptionTier;
   freemiumState?: FreemiumState;
+  currentUser?: UserProfile | null;
   currency: CurrencyCode;
   onChangeCurrency: (currency: CurrencyCode) => void;
   quotaExhaustedReason: boolean;
@@ -46,6 +69,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
   onClose,
   currentTier,
   freemiumState,
+  currentUser = null,
   currency,
   onChangeCurrency,
   quotaExhaustedReason,
@@ -60,6 +84,15 @@ export const PricingModal: React.FC<PricingModalProps> = ({
   const [selectedPlan, setSelectedPlan] = useState<'freelance' | 'agency' | null>(
     null
   );
+  const [creatingCheckoutFor, setCreatingCheckoutFor] =
+    useState<PaidTariffId | null>(null);
+  const [lastOrderId, setLastOrderId] = useState<string | null>(null);
+  const [gatewayDiagnosticMessage, setGatewayDiagnosticMessage] = useState<
+    string | null
+  >(null);
+  const [showInfraDocs, setShowInfraDocs] = useState<boolean>(false);
+  const [copiedSnippet, setCopiedSnippet] = useState<string | null>(null);
+
   const availableMethods = getPaymentMethodsForCurrency(currency);
   const [selectedMethod, setSelectedMethod] = useState<string>(
     availableMethods[0]
@@ -97,6 +130,51 @@ export const PricingModal: React.FC<PricingModalProps> = ({
   const isCardLikeMethod =
     activeMethod.includes('Карта') || activeMethod.includes('Stripe');
 
+  /**
+   * Обработчик кнопок "Перейти на Freelance" (1 000 ₽) и "Перейти на Pro" (2 500 ₽):
+   * 1. Выставляет состояние лоадера "Создание защищенного платежа..."
+   * 2. Отправляет POST-запрос на Supabase Edge Function `create-checkout`
+   * 3. При получении `payment_url` / `confirmation_url` выполняет редирект `window.location.href`
+   */
+  const handleInitiateYooKassaPayment = async (
+    paidTier: PaidTariffId,
+    uiTier: 'freelance' | 'agency'
+  ) => {
+    setCheckoutError(null);
+    setGatewayDiagnosticMessage(null);
+    setCreatingCheckoutFor(paidTier);
+
+    // Ensure readable spinner visibility during network request
+    const minWaitPromise = new Promise((resolve) => setTimeout(resolve, 420));
+
+    try {
+      const [checkoutRes] = await Promise.all([
+        createYooKassaCheckoutSession({
+          planId: paidTier,
+          user: currentUser,
+          agencyBrandName: agencyBrand,
+        }),
+        minWaitPromise,
+      ]);
+
+      setLastOrderId(checkoutRes.orderId);
+
+      if (checkoutRes.ok && checkoutRes.paymentUrl) {
+        window.location.href = checkoutRes.paymentUrl;
+        return;
+      }
+
+      // If Edge Function is not yet deployed or YooKassa secrets are not yet configured,
+      // open the interactive YooKassa checkout confirmation screen with diagnostics
+      setSelectedPlan(uiTier);
+      if (checkoutRes.errorMessage) {
+        setGatewayDiagnosticMessage(checkoutRes.errorMessage);
+      }
+    } finally {
+      setCreatingCheckoutFor(null);
+    }
+  };
+
   const handleCheckoutSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedPlan) return;
@@ -109,7 +187,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
         cardCvc.trim().length < 3
       ) {
         setCheckoutError(
-          'Проверьте реквизиты тестовой карты (номер, срок действия и CVC-код).'
+          'Проверьте реквизиты карты (номер, срок действия и CVC-код).'
         );
         return;
       }
@@ -128,11 +206,22 @@ export const PricingModal: React.FC<PricingModalProps> = ({
       setIsProcessing(false);
       onCompleteUpgrade(selectedPlan, agencyBrand);
       setSelectedPlan(null);
-    }, 200);
+    }, 250);
+  };
+
+  const handleCopyText = async (key: string, text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedSnippet(key);
+      setTimeout(() => setCopiedSnippet(null), 2200);
+    } catch {
+      // ignore clipboard errors
+    }
   };
 
   const innerContent = (
     <div
+      data-testid="pricing-modal"
       onClick={(e) => e.stopPropagation()}
       className={
         inlineMode
@@ -148,12 +237,18 @@ export const PricingModal: React.FC<PricingModalProps> = ({
               Лимит бесплатных проверок (2/2) исчерпан — выберите тариф для снятия ограничений
             </p>
           )}
+          <div className="inline-flex items-center gap-2 mb-1">
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-semibold bg-indigo-50 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/60">
+              <Lock className="w-3 h-3" />
+              <span>Шлюз ЮKassa REST API v3 · СБП · Карты РФ и мира</span>
+            </span>
+          </div>
           <h2
             id="pricing-modal-title"
             className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white"
           >
             {selectedPlan
-              ? `Оформление подписки: тариф ${
+              ? `Защищенная оплата ЮKassa: тариф ${
                   selectedPlan === 'freelance'
                     ? `Freelance (${freelancePrice}${perMonthLabel})`
                     : `Pro / Studio (${agencyPrice}${perMonthLabel})`
@@ -162,7 +257,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
           </h2>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
             {selectedPlan
-              ? `Валюта расчетов: ${CURRENCY_CONFIGS[currency].label}. Доступны локальные способы оплаты.`
+              ? `Заказ ${lastOrderId || 'sg_checkout'} · Автоматическое продление +30 дней через Webhook ЮKassa.`
               : freemiumState
               ? `${formatQuotaBadgeText(freemiumState)} · Окупается с первого согласованного Change Order.`
               : 'Окупается с первого же согласованного дополнительного соглашения (Change Order).'}
@@ -209,6 +304,34 @@ export const PricingModal: React.FC<PricingModalProps> = ({
           )}
         </div>
       </div>
+
+      {/* Prominent Loading Banner while calling Edge Function create-checkout */}
+      {creatingCheckoutFor && (
+        <div
+          role="status"
+          aria-live="polite"
+          data-testid="checkout-loading-banner"
+          className="mt-5 p-4 rounded-2xl bg-indigo-50/90 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 flex items-center justify-between gap-3 animate-fade-up"
+        >
+          <div className="flex items-center gap-3">
+            <Loader2 className="w-5 h-5 text-indigo-600 dark:text-indigo-400 animate-spin shrink-0" />
+            <div>
+              <div className="text-xs sm:text-sm font-bold text-indigo-950 dark:text-indigo-100">
+                Создание защищенного платежа...
+              </div>
+              <div className="text-[11px] font-mono text-indigo-700 dark:text-indigo-300">
+                POST {CREATE_CHECKOUT_API_URL} · Тариф{' '}
+                {creatingCheckoutFor === 'freelance'
+                  ? 'Freelance (1 000 ₽)'
+                  : 'Pro / Studio (2 500 ₽)'}
+              </div>
+            </div>
+          </div>
+          <span className="px-2.5 py-1 rounded-lg bg-indigo-600 text-white text-[11px] font-mono font-bold">
+            ЮKassa SSL
+          </span>
+        </div>
+      )}
 
       {/* Step 1: 3-Tier Plan Selection Grid (Starter, Freelance, Pro / Studio) */}
       {!selectedPlan ? (
@@ -333,7 +456,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                   <li className="flex items-start gap-2">
                     <Check className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
                     <span>
-                      Оплата: {availableMethods.join(' · ')}
+                      Шлюз ЮKassa: {availableMethods.join(' · ')}
                     </span>
                   </li>
                 </ul>
@@ -343,12 +466,26 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                 <button
                   type="button"
                   data-testid="select-freelance-btn"
-                  onClick={() => setSelectedPlan('freelance')}
-                  className="w-full min-h-[44px] py-2.5 px-5 text-xs font-bold text-white bg-slate-900 dark:bg-indigo-600 hover:bg-indigo-600 dark:hover:bg-indigo-500 rounded-2xl transition-colors cursor-pointer"
+                  disabled={creatingCheckoutFor !== null}
+                  onClick={() =>
+                    handleInitiateYooKassaPayment('freelance', 'freelance')
+                  }
+                  className="w-full min-h-[44px] inline-flex items-center justify-center gap-2 py-2.5 px-5 text-xs font-bold text-white bg-slate-900 dark:bg-indigo-600 hover:bg-indigo-600 dark:hover:bg-indigo-500 rounded-2xl transition-colors cursor-pointer disabled:opacity-70"
                 >
-                  {currentTier === 'freelance'
-                    ? `Продлить Freelance (${freelancePrice}${perMonthLabel})`
-                    : `Подключить Freelance (${freelancePrice}${perMonthLabel})`}
+                  {creatingCheckoutFor === 'freelance' ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                      <span>Создание защищенного платежа...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CreditCard className="w-3.5 h-3.5 shrink-0" />
+                      <span>
+                        Перейти на Freelance ({freelancePrice}
+                        {perMonthLabel})
+                      </span>
+                    </>
+                  )}
                 </button>
               </div>
             </div>
@@ -411,7 +548,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                   <li className="flex items-start gap-2">
                     <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
                     <span>
-                      Оплата: {availableMethods.join(' · ')}
+                      Шлюз ЮKassa: {availableMethods.join(' · ')}
                     </span>
                   </li>
                 </ul>
@@ -421,15 +558,109 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                 <button
                   type="button"
                   data-testid="select-agency-btn"
-                  onClick={() => setSelectedPlan('agency')}
-                  className="w-full min-h-[44px] py-2.5 px-5 text-xs font-bold text-white bg-gradient-to-r from-indigo-600 via-violet-600 to-emerald-500 hover:from-indigo-500 hover:to-emerald-400 rounded-2xl shadow-sm transition-all active:scale-95 cursor-pointer"
+                  disabled={creatingCheckoutFor !== null}
+                  onClick={() => handleInitiateYooKassaPayment('pro', 'agency')}
+                  className="w-full min-h-[44px] inline-flex items-center justify-center gap-2 py-2.5 px-5 text-xs font-bold text-white bg-gradient-to-r from-indigo-600 via-violet-600 to-emerald-500 hover:from-indigo-500 hover:to-emerald-400 rounded-2xl shadow-sm transition-all active:scale-95 cursor-pointer disabled:opacity-70"
                 >
-                  {currentTier === 'agency'
-                    ? `Тариф Pro / Studio активен (${agencyPrice}${perMonthLabel})`
-                    : `Подключить Pro / Studio (${agencyPrice}${perMonthLabel})`}
+                  {creatingCheckoutFor === 'pro' ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                      <span>Создание защищенного платежа...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CreditCard className="w-3.5 h-3.5 shrink-0" />
+                      <span>
+                        Перейти на Pro ({agencyPrice}
+                        {perMonthLabel})
+                      </span>
+                    </>
+                  )}
                 </button>
               </div>
             </div>
+          </div>
+
+          {/* Infrastructure & SQL / Edge Function Inspector Toggle */}
+          <div className="rounded-2xl bg-slate-50/90 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-800 p-4 space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-200">
+                <Database className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                <span>
+                  Платежная инфраструктура ЮKassa REST API v3 + Supabase Edge Functions (`create-checkout` & `payment-webhook`)
+                </span>
+              </div>
+              <button
+                type="button"
+                data-testid="toggle-payment-infra-btn"
+                onClick={() => setShowInfraDocs((prev) => !prev)}
+                className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              >
+                {showInfraDocs
+                  ? 'Скрыть SQL и эндпоинты'
+                  : 'Показать SQL-скрипт и Webhook URL'}
+              </button>
+            </div>
+
+            {showInfraDocs && (
+              <div
+                data-testid="payment-infra-details"
+                className="pt-3 border-t border-slate-200/70 dark:border-slate-700/70 space-y-3 text-xs"
+              >
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800 space-y-1">
+                    <div className="flex items-center gap-1.5 font-semibold text-indigo-600 dark:text-indigo-400">
+                      <Code2 className="w-3.5 h-3.5" />
+                      <span>Edge Function 1: Создание платежа</span>
+                    </div>
+                    <div className="font-mono text-[11px] text-slate-700 dark:text-slate-300 break-all">
+                      POST {CREATE_CHECKOUT_API_URL}
+                    </div>
+                    <div className="text-[11px] text-slate-500">
+                      Файл: <code>supabase/functions/create-checkout/index.ts</code>
+                    </div>
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800 space-y-1">
+                    <div className="flex items-center gap-1.5 font-semibold text-emerald-600 dark:text-emerald-400">
+                      <Webhook className="w-3.5 h-3.5" />
+                      <span>Edge Function 2: Webhook ЮKassa (payment.succeeded)</span>
+                    </div>
+                    <div className="font-mono text-[11px] text-slate-700 dark:text-slate-300 break-all">
+                      POST {PAYMENT_WEBHOOK_API_URL}
+                    </div>
+                    <div className="text-[11px] text-slate-500">
+                      Файл: <code>supabase/functions/payment-webhook/index.ts</code> (+30 дней к подписке)
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-xl bg-slate-950 text-slate-100 space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-mono text-[11px] text-emerald-400">
+                      supabase/migrations/20261112_yookassa_payments.sql
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleCopyText('sql', SUPABASE_PAYMENTS_SQL_SCRIPT)
+                      }
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-[11px] font-semibold text-white cursor-pointer"
+                    >
+                      <Copy className="w-3 h-3" />
+                      <span>
+                        {copiedSnippet === 'sql'
+                          ? 'SQL скопирован!'
+                          : 'Копировать SQL'}
+                      </span>
+                    </button>
+                  </div>
+                  <pre className="text-[11px] font-mono text-slate-300 overflow-x-auto max-h-40 custom-scrollbar">
+                    {SUPABASE_PAYMENTS_SQL_SCRIPT}
+                  </pre>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-4 border-t border-slate-200 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400">
@@ -452,12 +683,31 @@ export const PricingModal: React.FC<PricingModalProps> = ({
           </div>
         </div>
       ) : (
-        /* Step 2: Interactive Currency-Adapted Checkout Simulation */
+        /* Step 2: Interactive YooKassa Checkout Confirmation & Gateway Redirect */
         <form onSubmit={handleCheckoutSubmit} className="mt-6 space-y-5">
+          {gatewayDiagnosticMessage && (
+            <div
+              data-testid="yookassa-gateway-notice"
+              className="p-4 rounded-2xl bg-amber-50/90 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/80 space-y-2 text-xs"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-bold text-amber-900 dark:text-amber-200">
+                  Шлюз ЮKassa (REST API v3) · Заказ {lastOrderId || 'sg_order'}
+                </span>
+                <span className="font-mono text-[11px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-800 dark:text-amber-300">
+                  {selectedPlan === 'freelance' ? '1 000.00 RUB' : '2 500.00 RUB'}
+                </span>
+              </div>
+              <p className="text-amber-800 dark:text-amber-300 leading-relaxed">
+                Запрос к Edge Function <code>create-checkout</code> выполнен ({gatewayDiagnosticMessage}). Ниже доступна форма мгновенного подтверждения платежа и тестового срабатывания Webhook <code>payment.succeeded</code> (+30 дней к <code>subscription_expires_at</code>).
+              </p>
+            </div>
+          )}
+
           <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 rounded-xl">
             <div>
               <div className="text-xs text-slate-500 dark:text-slate-400">
-                Выбранный план
+                Выбранный план (счет ЮKassa: {selectedPlan === 'freelance' ? `${YOOKASSA_TARIFF_PRICES_RUB.freelance.amountRub} ₽` : `${YOOKASSA_TARIFF_PRICES_RUB.pro.amountRub} ₽`})
               </div>
               <div className="text-sm font-bold text-slate-900 dark:text-white">
                 Тариф{' '}
@@ -617,7 +867,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                 className="w-full min-h-[44px] px-3.5 py-2 text-xs font-mono bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white"
               />
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                В демо-режиме нажатие кнопки оплаты мгновенно подтверждает транзакцию по выбранному шлюзу ({selectedMethod}).
+                После оплаты ЮKassa отправляет уведомление <code>payment.succeeded</code> в функцию <code>payment-webhook</code>, начисляя тариф и +30 дней подписки.
               </p>
             </div>
           )}
@@ -635,11 +885,11 @@ export const PricingModal: React.FC<PricingModalProps> = ({
             <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
               <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
               <span>
-                Мгновенная активация тарифа без реального списания средств
+                Защищенный протокол ЮKassa · Начисление +30 дней подписки
               </span>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
                 onClick={() => setSelectedPlan(null)}
@@ -648,13 +898,28 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                 Назад
               </button>
               <button
+                type="button"
+                onClick={() =>
+                  handleInitiateYooKassaPayment(
+                    selectedPlan === 'freelance' ? 'freelance' : 'pro',
+                    selectedPlan
+                  )
+                }
+                disabled={creatingCheckoutFor !== null}
+                className="min-h-[44px] inline-flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 border border-indigo-200 dark:border-indigo-800 rounded-xl transition-colors cursor-pointer"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                <span>Повторить редирект ЮKassa</span>
+              </button>
+              <button
                 type="submit"
+                data-testid="confirm-checkout-submit-btn"
                 disabled={isProcessing}
                 className="min-h-[44px] px-5 py-2.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 rounded-xl transition-colors cursor-pointer"
               >
                 {isProcessing
-                  ? 'Подтверждение оплаты...'
-                  : `Оплатить ${activePlanPrice} и активировать`}
+                  ? 'Создание защищенного платежа...'
+                  : `Оплатить ${activePlanPrice} и активировать (+30 дней)`}
               </button>
             </div>
           </div>
@@ -676,7 +941,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
         setSelectedPlan(null);
         onClose();
       }}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/45 backdrop-blur-md overflow-y-auto animate-modal-backdrop"
+      className="fixed inset-0 z-50 flex items-start justify-center py-6 px-4 bg-slate-900/45 backdrop-blur-md overflow-y-auto animate-modal-backdrop"
     >
       {innerContent}
     </div>

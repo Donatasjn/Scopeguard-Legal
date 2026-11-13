@@ -388,7 +388,12 @@ function AppContent() {
 
     setFreemiumState((prev) => ({
       ...prev,
-      tier: currentUser.plan === 'pro' ? 'agency' : 'free',
+      tier:
+        currentUser.subscription_tier === 'freelance'
+          ? 'freelance'
+          : currentUser.plan === 'pro' || currentUser.subscription_tier === 'pro'
+          ? 'agency'
+          : 'free',
       usedAudits: currentUser.audits_used,
       maxFreeAudits: currentUser.audits_limit,
       agencyBrandName: currentUser.full_name || prev.agencyBrandName,
@@ -986,17 +991,56 @@ function AppContent() {
       upgradeSubscription(prev, tier, customAgencyBrand)
     );
     if (currentUser) {
-      const updated = await upgradeProfileToPro(currentUser, customAgencyBrand);
+      const updated = await upgradeProfileToPro(
+        currentUser,
+        customAgencyBrand,
+        tier
+      );
       setCurrentUser(updated);
     }
     setIsQuotaPaywallTriggered(false);
     setIsPricingModalOpen(false);
     addToast(
-      `Тариф ${tier === 'agency' ? 'Agency Unlimited' : 'Freelance Pro'} активирован`,
-      'Лимит проверок в профиле увеличен до 999, функции экспорта разблокированы.',
+      `Тариф ${tier === 'agency' ? 'Pro / Studio (2 500 ₽)' : 'Freelance (1 000 ₽)'} активирован`,
+      tier === 'agency'
+        ? 'Безлимитные аудиты (999) и подписка +30 дней успешно подключены.'
+        : 'Лимит 25 аудитов в месяц и подписка +30 дней успешно подключены.',
       'success'
     );
   };
+
+  // Handle return_url redirect from YooKassa (?payment=success&tier=freelance|pro)
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const paymentStatus = params.get('payment');
+      const paidTierParam = params.get('tier');
+      if (
+        paymentStatus === 'success' &&
+        (paidTierParam === 'freelance' || paidTierParam === 'pro')
+      ) {
+        const uiTier: 'freelance' | 'agency' =
+          paidTierParam === 'freelance' ? 'freelance' : 'agency';
+        setFreemiumState((prev) => upgradeSubscription(prev, uiTier));
+        if (currentUser) {
+          upgradeProfileToPro(currentUser, undefined, uiTier).then((updated) =>
+            setCurrentUser(updated)
+          );
+        }
+        addToast(
+          'Оплата через ЮKassa успешно подтверждена',
+          `Тариф ${
+            paidTierParam === 'freelance' ? 'Freelance (25 аудитов)' : 'Pro / Studio (Безлимит)'
+          } продлен на +30 дней.`,
+          'success'
+        );
+        const cleanUrl = window.location.pathname + window.location.hash;
+        window.history.replaceState({}, '', cleanUrl);
+      }
+    } catch {
+      // ignore URL parsing errors
+    }
+  }, []);
 
   const handleResetDemoQuota = () => {
     setFreemiumState(createInitialFreemiumState());
@@ -1520,6 +1564,7 @@ function AppContent() {
               onClose={() => setActiveTab('audit')}
               currentTier={freemiumState.tier}
               freemiumState={freemiumState}
+              currentUser={currentUser}
               currency={currency}
               onChangeCurrency={handleChangeCurrency}
               quotaExhaustedReason={isQuotaPaywallTriggered}
@@ -1595,6 +1640,7 @@ function AppContent() {
         onClose={() => setIsPricingModalOpen(false)}
         currentTier={freemiumState.tier}
         freemiumState={freemiumState}
+        currentUser={currentUser}
         currency={currency}
         onChangeCurrency={handleChangeCurrency}
         quotaExhaustedReason={isQuotaPaywallTriggered}

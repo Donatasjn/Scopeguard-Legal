@@ -30,6 +30,9 @@ export interface UserProfile {
   email: string;
   full_name: string;
   plan: 'free' | 'pro';
+  subscription_tier?: 'starter' | 'freelance' | 'pro';
+  subscription_expires_at?: string | null;
+  yookassa_payment_id?: string | null;
   audits_used: number;
   audits_limit: number;
   is_admin: boolean;
@@ -377,10 +380,24 @@ function normalizeProfileRow(
     email.toLowerCase().includes('admin');
   const planRaw =
     typeof row.plan === 'string' ? row.plan.toLowerCase() : 'free';
+  const tierRaw =
+    typeof row.subscription_tier === 'string'
+      ? row.subscription_tier.toLowerCase()
+      : '';
   const plan: 'free' | 'pro' =
-    planRaw === 'pro' || planRaw === 'agency' || planRaw === 'freelance'
+    planRaw === 'pro' ||
+    planRaw === 'agency' ||
+    planRaw === 'freelance' ||
+    tierRaw === 'freelance' ||
+    tierRaw === 'pro'
       ? 'pro'
       : 'free';
+  const subscription_tier: 'starter' | 'freelance' | 'pro' =
+    tierRaw === 'freelance'
+      ? 'freelance'
+      : tierRaw === 'pro' || plan === 'pro'
+      ? 'pro'
+      : 'starter';
 
   return {
     id:
@@ -393,6 +410,15 @@ function normalizeProfileRow(
         ? row.full_name.trim()
         : email.split('@')[0] || 'Студия разработки',
     plan,
+    subscription_tier,
+    subscription_expires_at:
+      typeof row.subscription_expires_at === 'string'
+        ? row.subscription_expires_at
+        : null,
+    yookassa_payment_id:
+      typeof row.yookassa_payment_id === 'string'
+        ? row.yookassa_payment_id
+        : null,
     audits_used:
       typeof row.audits_used === 'number' && row.audits_used >= 0
         ? row.audits_used
@@ -400,6 +426,8 @@ function normalizeProfileRow(
     audits_limit:
       typeof row.audits_limit === 'number' && row.audits_limit > 0
         ? row.audits_limit
+        : subscription_tier === 'freelance'
+        ? 25
         : plan === 'pro'
         ? 999
         : 3,
@@ -950,12 +978,34 @@ export async function toggleProfileAdminAccess(
 
 export async function upgradeProfileToPro(
   profile: UserProfile,
-  customStudioName?: string
+  customStudioName?: string,
+  tier: 'freelance' | 'agency' = 'agency',
+  yookassaPaymentId?: string
 ): Promise<UserProfile> {
+  const mappedTier: 'freelance' | 'pro' =
+    tier === 'freelance' ? 'freelance' : 'pro';
+  const nextLimit = mappedTier === 'freelance' ? 25 : 999;
+
+  const nowMs = Date.now();
+  const existingExpMs = profile.subscription_expires_at
+    ? new Date(profile.subscription_expires_at).getTime()
+    : 0;
+  const baseMs =
+    Number.isFinite(existingExpMs) && existingExpMs > nowMs
+      ? existingExpMs
+      : nowMs;
+  const nextExpiresAt = new Date(
+    baseMs + 30 * 24 * 60 * 60 * 1000
+  ).toISOString();
+
   const updated: UserProfile = {
     ...profile,
     plan: 'pro',
-    audits_limit: 999,
+    subscription_tier: mappedTier,
+    subscription_expires_at: nextExpiresAt,
+    yookassa_payment_id:
+      yookassaPaymentId || profile.yookassa_payment_id || null,
+    audits_limit: nextLimit,
     full_name:
       customStudioName && customStudioName.trim()
         ? customStudioName.trim()
@@ -970,18 +1020,21 @@ export async function upgradeProfileToPro(
       .from('profiles')
       .update({
         plan: 'pro',
-        audits_limit: 999,
+        subscription_tier: mappedTier,
+        subscription_expires_at: nextExpiresAt,
+        yookassa_payment_id: updated.yookassa_payment_id,
+        audits_limit: nextLimit,
         full_name: updated.full_name,
       })
       .eq('id', profile.id);
   } catch {
-    // ignore
+    // ignore if columns are not yet migrated on remote DB
   }
 
   await logUserActivity(
     updated,
-    'Переход на тариф Pro',
-    `Активирован тариф PRO (лимит: 999 проверок) для ${updated.email}`
+    `Переход на тариф ${mappedTier === 'freelance' ? 'Freelance' : 'Pro'}`,
+    `Активирован тариф ${mappedTier.toUpperCase()} (лимит: ${nextLimit} проверок, до ${nextExpiresAt.slice(0, 10)}) для ${updated.email}`
   );
 
   return updated;

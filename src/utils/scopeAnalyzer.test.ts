@@ -334,3 +334,72 @@ test('Supabase client config and user quota/profile helpers enforce rules accura
   );
 });
 
+test('YooKassa payment helpers generate valid checkout payloads (1000 RUB / 2500 RUB) and +30d expiration', async () => {
+  const {
+    CREATE_CHECKOUT_API_URL,
+    PAYMENT_WEBHOOK_API_URL,
+    SUPABASE_PAYMENTS_SQL_SCRIPT,
+    buildYooKassaCheckoutPayload,
+    calculateExtendedSubscriptionExpiry,
+  } = await import('../lib/payments');
+
+  assert.equal(
+    CREATE_CHECKOUT_API_URL,
+    'https://qkkvqcfphbrprzptmuew.supabase.co/functions/v1/create-checkout'
+  );
+  assert.equal(
+    PAYMENT_WEBHOOK_API_URL,
+    'https://qkkvqcfphbrprzptmuew.supabase.co/functions/v1/payment-webhook'
+  );
+  assert.ok(SUPABASE_PAYMENTS_SQL_SCRIPT.includes('subscription_tier'));
+  assert.ok(SUPABASE_PAYMENTS_SQL_SCRIPT.includes('subscription_expires_at'));
+  assert.ok(SUPABASE_PAYMENTS_SQL_SCRIPT.includes('yookassa_payment_id'));
+  assert.ok(SUPABASE_PAYMENTS_SQL_SCRIPT.includes('payments_history'));
+
+  const freelancePayload = buildYooKassaCheckoutPayload(
+    {
+      planId: 'freelance',
+      user: {
+        id: 'user-123',
+        email: 'pm@studio.ru',
+        full_name: 'PM Studio',
+        plan: 'free',
+        audits_used: 1,
+        audits_limit: 2,
+        is_admin: false,
+        created_at: '2026-11-12T00:00:00Z',
+      },
+    },
+    1700000000000
+  );
+  assert.equal(freelancePayload.planId, 'freelance');
+  assert.equal(freelancePayload.amountRub, 1000);
+  assert.equal(freelancePayload.userId, 'user-123');
+  assert.ok(freelancePayload.orderId.startsWith('sg_1700000000000_'));
+
+  const proPayload = buildYooKassaCheckoutPayload(
+    {
+      planId: 'pro',
+      user: null,
+      agencyBrandName: 'LegalTech Agency',
+    },
+    1700000000000
+  );
+  assert.equal(proPayload.planId, 'pro');
+  assert.equal(proPayload.amountRub, 2500);
+  assert.equal(proPayload.agencyBrandName, 'LegalTech Agency');
+
+  const baseNow = new Date('2026-11-12T00:00:00.000Z').getTime();
+  const extendedFromNow = calculateExtendedSubscriptionExpiry(null, 30, baseNow);
+  assert.equal(extendedFromNow, '2026-12-12T00:00:00.000Z');
+
+  const activeFuture = '2026-12-01T00:00:00.000Z';
+  const extendedFromFuture = calculateExtendedSubscriptionExpiry(
+    activeFuture,
+    30,
+    baseNow
+  );
+  assert.equal(extendedFromFuture, '2026-12-31T00:00:00.000Z');
+});
+
+
